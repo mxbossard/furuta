@@ -48,6 +48,8 @@ struct AngleSensorSimulator {
   const char* name;
 };
 
+portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+
 AngleSensor sensor1 = {SENSOR_1_PIN_A, SENSOR_1_PIN_B, SENSOR_1_PIN_INDEX, 4000, 0, "sensor1"};
 AngleSensor sensor2 = {SENSOR_2_PIN_A, SENSOR_2_PIN_B, SENSOR_2_PIN_INDEX, 1000, 0, "sensor2"};
 
@@ -65,10 +67,14 @@ void IRAM_ATTR moveSensor1A() {
 
     if (aLevel == bLevel) {
         // Increment position
+        portENTER_CRITICAL(&mux);
         sensor1.position ++;
+        portEXIT_CRITICAL(&mux);
     } else {
         // Decrement position
+        portENTER_CRITICAL(&mux);
         sensor1.position --;
+        portEXIT_CRITICAL(&mux);
     }
     //sensor1.position = absMod32(sensor1.position, sensor1.maxPosition);
 }
@@ -79,16 +85,22 @@ void IRAM_ATTR moveSensor1B() {
 
     if (aLevel != bLevel) {
         // Increment position
+        portENTER_CRITICAL(&mux);
         sensor1.position ++;
+        portEXIT_CRITICAL(&mux);
     } else {
         // Decrement position
+        portENTER_CRITICAL(&mux);
         sensor1.position --;
+        portEXIT_CRITICAL(&mux);
     }
     //sensor1.position = absMod32(sensor1.position, sensor1.maxPosition);
 }
 
 void IRAM_ATTR resetSensor1() {
+    portENTER_CRITICAL(&mux);
     sensor1.position = 0;
+    portEXIT_CRITICAL(&mux);
 }
 
 void IRAM_ATTR moveSensor2A() {
@@ -97,10 +109,14 @@ void IRAM_ATTR moveSensor2A() {
 
     if (aLevel == bLevel) {
         // Increment position
+        portENTER_CRITICAL(&mux);
         sensor2.position ++;
+        portEXIT_CRITICAL(&mux);
     } else {
         // Decrement position
+        portENTER_CRITICAL(&mux);
         sensor2.position --;
+        portEXIT_CRITICAL(&mux);
     }
     //sensor2.position = absMod32(sensor2.position, sensor2.maxPosition);
 }
@@ -111,16 +127,22 @@ void IRAM_ATTR moveSensor2B() {
 
     if (aLevel != bLevel) {
         // Increment position
+        portENTER_CRITICAL(&mux);
         sensor2.position ++;
+        portEXIT_CRITICAL(&mux);
     } else {
         // Decrement position
+        portENTER_CRITICAL(&mux);
         sensor2.position --;
+        portEXIT_CRITICAL(&mux);
     }
     //sensor2.position = absMod32(sensor2.position, sensor2.maxPosition);
 }
 
 void IRAM_ATTR resetSensor2() {
+    portENTER_CRITICAL(&mux);
     sensor2.position = 0;
+    portEXIT_CRITICAL(&mux);
 }
 
 
@@ -246,7 +268,7 @@ void assertCount(const char* message, AngleSensor sensor, AngleSensorSimulator s
     if (!simulator.enabled) {
         return;
     }
-    delay(10);
+    delay(1);
     int32_t expectedCount = simulator.position;
     int32_t drift = abs(expectedCount - sensor.position);
 
@@ -260,7 +282,7 @@ void assertPosition(const char* message, AngleSensor sensor, AngleSensorSimulato
     if (!simulator.enabled) {
         return;
     }
-    delay(10);
+    delay(1);
     int32_t position = absMod32(sensor.position, sensor.maxPosition);
     int32_t expectedPosition = absMod32(simulator.position, sensor.maxPosition);
     int32_t drift = abs(expectedPosition - position);
@@ -295,7 +317,44 @@ void testModulo() {
     Serial.printf("%d absMod32 %d = %d\n", a, b, c);
 }
 
+void testPendulum(uint16_t amplitude1, uint16_t amplitude2, uint16_t bounces, uint32_t periodInUs) {
+    indexSimul(simul1, periodInUs);
+    indexSimul(simul2, periodInUs);
+    for (; bounces > 0 ; bounces --) {
+        moveBothSimulators(true, amplitude1, false, amplitude2, periodInUs);
+        char message[60];
+        sprintf(message, "Pendulum rising bounce %d", bounces);
+        assertPosition(message, sensor1, simul1);
+        assertPosition(message, sensor2, simul2);
 
+        moveBothSimulators(false, amplitude1, true, amplitude2, periodInUs);
+        sprintf(message, "Pendulum falling bounce %d", bounces);
+        assertPosition(message, sensor1, simul1);
+        assertPosition(message, sensor2, simul2);
+
+        indexSimul(simul1, periodInUs);
+        assertCount("Reseting index", sensor1, simul1);
+        indexSimul(simul2, periodInUs);
+        assertCount("Reseting index", sensor2, simul2);
+
+        amplitude1 -= (1/bounces) * amplitude1;
+        amplitude2 -= (1/bounces) * amplitude2;
+        moveBothSimulators(false, amplitude1, true, amplitude2, periodInUs);
+        sprintf(message, "Pendulum rising back bounce %d", bounces);
+        assertPosition(message, sensor1, simul1);
+        assertPosition(message, sensor2, simul2);
+
+        moveBothSimulators(false, amplitude1, true, amplitude2, periodInUs);
+        sprintf(message, "Pendulum falling back bounce %d", bounces);
+        assertPosition(message, sensor1, simul1);
+        assertPosition(message, sensor2, simul2);
+
+        indexSimul(simul1, periodInUs);
+        assertCount("Reseting index", sensor1, simul1);
+        indexSimul(simul2, periodInUs);
+        assertCount("Reseting index", sensor2, simul2);
+    }
+}
 
 void setup() {
     Serial.begin(115200);
@@ -338,45 +397,6 @@ void setup() {
     digitalWrite(simul2.pinIndex, LOW);
 
     pinMode(LED_PIN, OUTPUT);
-}
-
-void testPendulum(uint16_t amplitude1, uint16_t amplitude2, uint16_t bounces, uint32_t periodInUs) {
-    indexSimul(simul1, periodInUs);
-    indexSimul(simul2, periodInUs);
-    for (; bounces > 0 ; bounces --) {
-        moveBothSimulators(true, amplitude1, false, amplitude2, periodInUs);
-        char message[60];
-        sprintf(message, "Pendulum rising bounce %d", bounces);
-        assertPosition(message, sensor1, simul1);
-        assertPosition(message, sensor2, simul2);
-
-        moveBothSimulators(false, amplitude1, true, amplitude2, periodInUs);
-        sprintf(message, "Pendulum falling bounce %d", bounces);
-        assertPosition(message, sensor1, simul1);
-        assertPosition(message, sensor2, simul2);
-
-        indexSimul(simul1, periodInUs);
-        assertCount("Reseting index", sensor1, simul1);
-        indexSimul(simul2, periodInUs);
-        assertCount("Reseting index", sensor2, simul2);
-
-        amplitude1 -= (1/bounces) * amplitude1;
-        amplitude2 -= (1/bounces) * amplitude2;
-        moveBothSimulators(false, amplitude1, true, amplitude2, periodInUs);
-        sprintf(message, "Pendulum rising back bounce %d", bounces);
-        assertPosition(message, sensor1, simul1);
-        assertPosition(message, sensor2, simul2);
-
-        moveBothSimulators(false, amplitude1, true, amplitude2, periodInUs);
-        sprintf(message, "Pendulum falling back bounce %d", bounces);
-        assertPosition(message, sensor1, simul1);
-        assertPosition(message, sensor2, simul2);
-
-        indexSimul(simul1, periodInUs);
-        assertCount("Reseting index", sensor1, simul1);
-        indexSimul(simul2, periodInUs);
-        assertCount("Reseting index", sensor2, simul2);
-    }
 }
 
 void loop() {
