@@ -234,10 +234,10 @@ void moveBothSimulators(bool direction1, uint32_t step1, bool direction2, uint32
     // Serial.printf("Moved simul1: %d ; simul2: %d\n", moves1, moves2);
 }
 
-void indexSimul(AngleSensorSimulator &simulator) {
+void indexSimul(AngleSensorSimulator &simulator, uint32_t periodInUs) {
     //Serial.printf("[%s] Reseting index\n", simulator.name);
     digitalWrite(simulator.pinIndex, HIGH);
-    delay(1);
+    delayMicroseconds(periodInUs);
     digitalWrite(simulator.pinIndex, LOW);
     simulator.position = 0;
 }
@@ -267,7 +267,7 @@ void assertPosition(const char* message, AngleSensor sensor, AngleSensorSimulato
     drift = min(drift, sensor.maxPosition - drift);
 
     if (position != expectedPosition) {
-        Serial.printf("Bad position for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor.name, drift, expectedPosition, position, message);
+        Serial.printf("Bad position for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor.name, drift, simulator.position, sensor.position, message);
         delay(pause);
     }
 }
@@ -341,8 +341,8 @@ void setup() {
 }
 
 void testPendulum(uint16_t amplitude1, uint16_t amplitude2, uint16_t bounces, uint32_t periodInUs) {
-    indexSimul(simul1);
-    indexSimul(simul2);
+    indexSimul(simul1, periodInUs);
+    indexSimul(simul2, periodInUs);
     for (; bounces > 0 ; bounces --) {
         moveBothSimulators(true, amplitude1, false, amplitude2, periodInUs);
         char message[60];
@@ -355,8 +355,10 @@ void testPendulum(uint16_t amplitude1, uint16_t amplitude2, uint16_t bounces, ui
         assertPosition(message, sensor1, simul1);
         assertPosition(message, sensor2, simul2);
 
-        indexSimul(simul1);
-        indexSimul(simul2);
+        indexSimul(simul1, periodInUs);
+        assertCount("Reseting index", sensor1, simul1);
+        indexSimul(simul2, periodInUs);
+        assertCount("Reseting index", sensor2, simul2);
 
         amplitude1 -= (1/bounces) * amplitude1;
         amplitude2 -= (1/bounces) * amplitude2;
@@ -370,8 +372,10 @@ void testPendulum(uint16_t amplitude1, uint16_t amplitude2, uint16_t bounces, ui
         assertPosition(message, sensor1, simul1);
         assertPosition(message, sensor2, simul2);
 
-        indexSimul(simul1);
-        indexSimul(simul2);
+        indexSimul(simul1, periodInUs);
+        assertCount("Reseting index", sensor1, simul1);
+        indexSimul(simul2, periodInUs);
+        assertCount("Reseting index", sensor2, simul2);
     }
 }
 
@@ -389,9 +393,9 @@ void loop() {
 
     uint32_t periodInUs = 2;
 
-    indexSimul(simul1);
-    indexSimul(simul2);
+    indexSimul(simul1, periodInUs);
     assertCount("Reseting index", sensor1, simul1);
+    indexSimul(simul2, periodInUs);
     assertCount("Reseting index", sensor2, simul2);
     // printSimulators();
     // printSensors();
@@ -420,14 +424,10 @@ void loop() {
     assertCount("Turning 101 steps right", sensor1, simul1);
     assertCount("Turning 101 steps right", sensor2, simul2);
 
-    moveBothSimulators(true, 3997, false, 1000, periodInUs);
-    assertCount("Turning limit testing", sensor1, simul1, 2000);
-    assertCount("Turning timit testing", sensor2, simul2, 2000);
-    
-    moveBothSimulators(false, 1, true, 1, periodInUs);
-    assertCount("Turning limit testing", sensor1, simul1);
-    assertCount("Turning timit testing", sensor2, simul2);
-
+    moveBothSimulators(true, 3997, false, 1001, periodInUs);
+    assertCount("Turning 3997 steps right", sensor1, simul1);
+    assertCount("Turning 1001 steps left", sensor2, simul2);
+   
     // Turn 1 round one side
     moveBothSimulators(true, sensor1.maxPosition + 3, false, sensor2.maxPosition - 5, periodInUs);
     assertCount("Turning 1 round + 3 steps right", sensor1, simul1);
@@ -443,9 +443,9 @@ void loop() {
     //assertPosition("Turning 50 round left", sensor2, simul2);
 
     // Reset index
-    indexSimul(simul1);
-    indexSimul(simul2);
+    indexSimul(simul1, periodInUs);
     assertCount("Reseting index", sensor1, simul1);
+    indexSimul(simul2, periodInUs);
     assertCount("Reseting index", sensor2, simul2);
 
     // Turn 20 round the other side
