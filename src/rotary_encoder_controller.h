@@ -51,19 +51,16 @@ void IRAM_ATTR moveSensor1A() {
     if (aLevel == bLevel) {
         // Increment position
         portENTER_CRITICAL(&mux);
+        pushCircularBuffer(&timings1, esp_timer_get_time());
         sensor1.position ++;
         portEXIT_CRITICAL(&mux);
     } else {
         // Decrement position
         portENTER_CRITICAL(&mux);
+        pushCircularBuffer(&timings1, -esp_timer_get_time());
         sensor1.position --;
         portEXIT_CRITICAL(&mux);
     }
-
-    // Naive timings: push ms from start at each move
-    portENTER_CRITICAL(&mux);
-    pushCircularBuffer(&timings1, esp_timer_get_time());
-    portEXIT_CRITICAL(&mux);
 
     //sensor1.position = absMod32(sensor1.position, sensor1.maxPosition);
 }
@@ -75,19 +72,16 @@ void IRAM_ATTR moveSensor1B() {
     if (aLevel != bLevel) {
         // Increment position
         portENTER_CRITICAL(&mux);
+        pushCircularBuffer(&timings1, esp_timer_get_time());
         sensor1.position ++;
         portEXIT_CRITICAL(&mux);
     } else {
         // Decrement position
         portENTER_CRITICAL(&mux);
+        pushCircularBuffer(&timings1, -esp_timer_get_time());
         sensor1.position --;
         portEXIT_CRITICAL(&mux);
     }
-
-    // Naive timings: push ms from start at each move
-    portENTER_CRITICAL(&mux);
-    pushCircularBuffer(&timings1, esp_timer_get_time());
-    portEXIT_CRITICAL(&mux);
 
     //sensor1.position = absMod32(sensor1.position, sensor1.maxPosition);
 }
@@ -105,19 +99,16 @@ void IRAM_ATTR moveSensor2A() {
     if (aLevel == bLevel) {
         // Increment position
         portENTER_CRITICAL(&mux);
+        pushCircularBuffer(&timings2, esp_timer_get_time());
         sensor2.position ++;
         portEXIT_CRITICAL(&mux);
     } else {
         // Decrement position
         portENTER_CRITICAL(&mux);
+        pushCircularBuffer(&timings2, -esp_timer_get_time());
         sensor2.position --;
         portEXIT_CRITICAL(&mux);
     }
-
-    // Naive timings: push ms from start at each move
-    portENTER_CRITICAL(&mux);
-    pushCircularBuffer(&timings2, esp_timer_get_time());
-    portEXIT_CRITICAL(&mux);
 
     //sensor2.position = absMod32(sensor2.position, sensor2.maxPosition);
 }
@@ -129,19 +120,16 @@ void IRAM_ATTR moveSensor2B() {
     if (aLevel != bLevel) {
         // Increment position
         portENTER_CRITICAL(&mux);
+        pushCircularBuffer(&timings2, esp_timer_get_time());
         sensor2.position ++;
         portEXIT_CRITICAL(&mux);
     } else {
         // Decrement position
         portENTER_CRITICAL(&mux);
+        pushCircularBuffer(&timings2, -esp_timer_get_time());
         sensor2.position --;
         portEXIT_CRITICAL(&mux);
     }
-
-    // Naive timings: push ms from start at each move
-    portENTER_CRITICAL(&mux);
-    pushCircularBuffer(&timings2, esp_timer_get_time());
-    portEXIT_CRITICAL(&mux);
 
     //sensor2.position = absMod32(sensor2.position, sensor2.maxPosition);
 }
@@ -158,23 +146,85 @@ void printSensorInputs() {
     Serial.printf(" ; [%s] pinA(%d): %d pinB(%d): %d pinIndex(%d): %d\n", sensor2.name, sensor2.pinA, digitalRead(sensor2.pinA), sensor2.pinB, digitalRead(sensor2.pinB), sensor2.pinIndex, digitalRead(sensor2.pinIndex));
 }
 
+int32_t* calculateSpeeds(CircularBuffer* b, int64_t now) {
+    int32_t* data = getDataArrayCircularBuffer(b);
+    int32_t size = sizeCircularBuffer(*b);
 
-void printSensor(AngleSensor sensor, bool newLine = true) {
-    String message = "[%s] position: %d";
+    for (int32_t k = size - 1 ; k > 0 ; k --) {
+        // Calculate instantaneous speed between timings
+        if (data[k] > 0) {
+            data[k] = abs(data[k - 1]) - data[k];
+        } else {
+            data[k] = - abs(data[k - 1]) - data[k];
+        }
+    }
+
+    // Last speed is calculated with current time
+    if (data[0] > 0) {
+        data[0] = now - data[0];
+    } else {
+        data[0] = - now - data[0];
+    }
+
+    return data;
+}
+
+const char* positionMessage(AngleSensor sensor) {
+    char* buf = (char*) malloc(sizeof(char) * 16);
+    sprintf(buf, "%d", sensor.position);
+    return buf;
+}
+
+int32_t speedMessage(char* buf, CircularBuffer* b, int64_t now) {
+    int32_t size = sizeCircularBuffer(*b);
+    int32_t* speeds = calculateSpeeds(b, now);
+    return printArray(buf, speeds, size);
+}
+
+const char* sensorMessage(AngleSensor sensor, CircularBuffer* timings, int64_t now = esp_timer_get_time()) {
+    char* buf = (char*) malloc(sizeof(char) * 128);
+    int32_t n = sprintf(buf, "[%s] position: %d speeds: ", sensor.name, sensor.position);
+    n += speedMessage(buf, timings, now);
+    
+    return buf;
+}
+
+int32_t sensorsMessage(char* buf) {
+    int64_t now = esp_timer_get_time();
+    int32_t n = sprintf(buf, "[%s] position: %d speeds: ", sensor1.name, sensor1.position);
+    n += speedMessage(&buf[n], &timings1, now);
+    n += sprintf(&buf[n], " ; [%s] position: %d speeds: ", sensor2.name, sensor2.position);
+    n += speedMessage(&buf[n], &timings2, now);
+    return n;
+}
+/*
+void printSpeeds(CircularBuffer* b, bool newLine = true) {
+    String message = "speeds: %s";
     if (newLine) {
         message.concat("\n");
     }
-    Serial.printf(message.c_str(), sensor.name, sensor.position);
+
+    int32_t size = sizeCircularBuffer(*b);
+    int32_t* speeds = calculateSpeeds(b);
+
+    const char* timings = printArray(speeds, size);
+    Serial.printf(message.c_str(), timings);
+}
+*/
+
+void printSensor(AngleSensor sensor, CircularBuffer* timings, bool newLine = true) {
+    const char* msg = sensorMessage(sensor, timings);
+    Serial.printf("%s", msg);
+    if (newLine) {
+        Serial.println();
+    }
 }
 
+char* sensorsMessageBuffer = (char*) malloc(sizeof(char) * 256);
 void printSensors() {
-    printSensor(sensor1, false);
-    Serial.printf(" ");
-    printCircularBuffer(timings1, false);
-    Serial.printf(" ; ");
-    printSensor(sensor2, false);
-    Serial.printf(" ");
-    printCircularBuffer(timings2, true);
+    sensorsMessage(sensorsMessageBuffer);
+    Serial.printf("%s\n", sensorsMessageBuffer);
 }
+
 
 #endif

@@ -16,7 +16,7 @@ void initArray(int32_t* a) {
     }
 }
 
-const char* printArray(int32_t a[], int32_t size) {
+int32_t printArray(char* buf, int32_t a[], int32_t size) {
     // Serial.printf("size: %d ", size);
     String message = "[";
     String data = String(a[0]);
@@ -27,9 +27,7 @@ const char* printArray(int32_t a[], int32_t size) {
         message.concat(data);
     }
     message.concat("]");
-    char* buf = (char *) malloc (message.length());
-    strcpy(buf, message.c_str());
-    return buf;
+    return sprintf(buf, message.c_str());
 }
 
 #endif

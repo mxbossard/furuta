@@ -5,6 +5,7 @@ struct CircularBuffer {
   int32_t data[5]; // circular buffer
   int8_t offset;
   int8_t lastPosition;
+  int32_t buffer[5]; // contains ordered data
 };
 
 size_t sizeCircularBuffer(CircularBuffer b) {
@@ -40,38 +41,32 @@ int32_t getLastDataCircularBuffer(CircularBuffer b) {
     return b.data[b.lastPosition];
 }
 
-int32_t* getDataArrayCircularBuffer(CircularBuffer b) {
+int32_t* getDataArrayCircularBuffer(CircularBuffer* b) {
     // Copy data array in new buffer: first item is last pushed
-    size_t length = sizeof(b.data) / sizeof(b.data[0]);
+    size_t length = sizeof(b->data) / sizeof(b->data[0]);
     // Serial.printf("length: %d ", length);
-    int32_t* buf = (int32_t *) malloc(length * sizeof(int32_t));
+    //int32_t* buffer = (int32_t *) malloc(length * sizeof(int32_t));
+    int32_t* buffer = b->buffer;
     for (int32_t k = 0; k < 5; k ++) {
-        int32_t index = b.lastPosition - k;
+        int32_t index = b->lastPosition - k;
         if (index < 0) {
             index += length;
         }
-        buf[k] = b.data[index];
+        buffer[k] = b->data[index];
         // buf[k] = k + 1;
     }
-    length = sizeof(buf) / sizeof(buf[0]);
+    //length = sizeof(buffer) / sizeof(buffer[0]);
     // Serial.printf("length: %d ", length);
-    return buf;
+    return buffer;
 }
 
-void printCircularBuffer(CircularBuffer b, bool newLine = true) {
-    String message = "timings: %s";
-    if (newLine) {
-        message.concat("\n");
-    }
+int32_t printCircularBuffer(char* buf, CircularBuffer* b, bool newLine = true) {
+    int32_t n = sprintf(buf, "CircularBuffer: ");
     int32_t* data = getDataArrayCircularBuffer(b);
-    int32_t size = sizeCircularBuffer(b);
-
-    int32_t firstTiming = data[0];
-    for (int32_t k = 0 ; k < size ; k ++) {
-        data[k] = firstTiming - data[k];
-        //data[k] = data[k] - data[size - 1];
+    int32_t size = sizeCircularBuffer(*b);
+    n += printArray(buf, data, size);
+    if (newLine) {
+        n += sprintf(buf, "\n");
     }
-
-    const char* timings = printArray(data, size);
-    Serial.printf(message.c_str(), timings);
+    return n;
 }

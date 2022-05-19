@@ -7,7 +7,7 @@ void assertCount(const char* message, AngleSensor sensor, AngleSensorSimulator s
     if (!simulator.enabled) {
         return;
     }
-    delay(1);
+    //delay(1);
     int32_t expectedCount = simulator.position;
     int32_t drift = abs(expectedCount - sensor.position);
 
@@ -21,7 +21,7 @@ void assertPosition(const char* message, AngleSensor sensor, AngleSensorSimulato
     if (!simulator.enabled) {
         return;
     }
-    delay(1);
+    //delay(1);
     int32_t position = absMod32(sensor.position, sensor.maxPosition);
     int32_t expectedPosition = absMod32(simulator.position, sensor.maxPosition);
     int32_t drift = abs(expectedPosition - position);
@@ -174,19 +174,18 @@ void loop() {
     assertCount("Turning 1 steps right", sensor1, simul1);
     assertCount("Turning 1 step left", sensor2, simul2);
 
-    printSensors();
+    //printSensors();
 
-    moveBothSimulators(true, 2, false, 3, periodInUs);
-    assertCount("Turning 2 steps right", sensor1, simul1);
-    assertCount("Turning 3 step left", sensor2, simul2);
+    moveBothSimulators(false, 2, true, 3, periodInUs);
+    assertCount("Turning 2 steps left", sensor1, simul1);
+    assertCount("Turning 3 step right", sensor2, simul2);
 
-    printSensors();
+    //printSensors();
 
     moveBothSimulators(true, 3, false, 2, periodInUs);
+    printSensors();
     assertCount("Turning 3 steps right", sensor1, simul1);
     assertCount("Turning 2 step left", sensor2, simul2);
-
-    printSensors();
 
     moveBothSimulators(true, 11, false, 7, periodInUs);
     assertCount("Turning 11 steps right", sensor1, simul1);
