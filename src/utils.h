@@ -11,24 +11,25 @@ int32_t absMod32(int32_t a, uint16_t b) {
 
 void initArray(int32_t* a) {
     size_t length = sizeof(a) / sizeof(a[0]);
-    for (int8_t k = 0 ; k < length ; k++) {
+    for (int8_t k = 0 ; k < length ; k ++) {
         a[k] = 0;
     }
 }
 
-const char* printArray(int32_t* a) {
-    size_t length = sizeof(a) / sizeof(a[0]);
-    Serial.printf("length: %d\n", length);
+const char* printArray(int32_t a[], int32_t size) {
+    // Serial.printf("size: %d ", size);
     String message = "[";
     String data = String(a[0]);
     message.concat(data);
-    for (int32_t k = 0; k < length; k++) {
+    for (int32_t k = 1; k < size; k ++) {
         message.concat("; ");
         String data = String(a[k]);
         message.concat(data);
     }
     message.concat("]");
-    return message.c_str();
+    char* buf = (char *) malloc (message.length());
+    strcpy(buf, message.c_str());
+    return buf;
 }
 
 #endif

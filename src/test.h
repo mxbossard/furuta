@@ -170,15 +170,23 @@ void loop() {
     assertCount("Turning 1 steps right", sensor1, simul1);
     assertCount("Turning 0 step", sensor2, simul2);
 
-    moveBothSimulators(true, 2, false, 2, periodInUs);
-    assertCount("Turning 2 steps right", sensor1, simul1);
-    assertCount("Turning 2 step left", sensor2, simul2);
+    moveBothSimulators(true, 1, false, 1, periodInUs);
+    assertCount("Turning 1 steps right", sensor1, simul1);
+    assertCount("Turning 1 step left", sensor2, simul2);
 
     printSensors();
 
-    moveBothSimulators(true, 5, false, 3, periodInUs);
-    assertCount("Turning 5 steps right", sensor1, simul1);
+    moveBothSimulators(true, 2, false, 3, periodInUs);
+    assertCount("Turning 2 steps right", sensor1, simul1);
     assertCount("Turning 3 step left", sensor2, simul2);
+
+    printSensors();
+
+    moveBothSimulators(true, 3, false, 2, periodInUs);
+    assertCount("Turning 3 steps right", sensor1, simul1);
+    assertCount("Turning 2 step left", sensor2, simul2);
+
+    printSensors();
 
     moveBothSimulators(true, 11, false, 7, periodInUs);
     assertCount("Turning 11 steps right", sensor1, simul1);
