@@ -1,5 +1,5 @@
-#ifndef utils_h
-#define utils_h
+#ifndef lib_utils_h
+#define lib_utils_h
 
 #include <Arduino.h>
 

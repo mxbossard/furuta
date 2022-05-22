@@ -1,9 +1,10 @@
-#ifndef rotary_encoder_simulator_h
-#define rotary_encoder_simulator_h
+#ifndef lib_rotary_encoder_simulator_h
+#define lib_rotary_encoder_simulator_h
 
 #include <Arduino.h>
 
-#include <utils.h>
+#include <lib_utils.h>
+#include <lib_model.h>
 
 #define SIMUL_1_PIN_A 25
 #define SIMUL_1_PIN_B 26
@@ -12,16 +13,6 @@
 #define SIMUL_2_PIN_A 14
 #define SIMUL_2_PIN_B 12
 #define SIMUL_2_PIN_INDEX 13
-
-struct AngleSensorSimulator {
-  const uint8_t pinA;
-  const uint8_t pinB;
-  const uint8_t pinIndex;
-  int32_t position;
-  int32_t counter;
-  bool enabled;
-  const char* name;
-};
 
 AngleSensorSimulator simul1 = {SIMUL_1_PIN_A, SIMUL_1_PIN_B, SIMUL_1_PIN_INDEX, 0, 0, true, "simula1"};
 AngleSensorSimulator simul2 = {SIMUL_2_PIN_A, SIMUL_2_PIN_B, SIMUL_2_PIN_INDEX, 0, 0, true, "simula2"};
@@ -127,6 +118,24 @@ void indexSimul(AngleSensorSimulator &simulator, uint32_t periodInUs) {
     delayMicroseconds(periodInUs);
     digitalWrite(simulator.pinIndex, LOW);
     simulator.position = 0;
+}
+
+void simulatorSetup() {
+    // Simulateur sensor 1
+    pinMode(simul1.pinA, OUTPUT);
+    pinMode(simul1.pinB, OUTPUT);
+    pinMode(simul1.pinIndex, OUTPUT);
+    digitalWrite(simul1.pinA, LOW);
+    digitalWrite(simul1.pinB, LOW);
+    digitalWrite(simul1.pinIndex, LOW);
+
+    // Simulateur sensor 1
+    pinMode(simul2.pinA, OUTPUT);
+    pinMode(simul2.pinB, OUTPUT);
+    pinMode(simul2.pinIndex, OUTPUT);
+    digitalWrite(simul2.pinA, LOW);
+    digitalWrite(simul2.pinB, LOW);
+    digitalWrite(simul2.pinIndex, LOW);
 }
 
 #endif

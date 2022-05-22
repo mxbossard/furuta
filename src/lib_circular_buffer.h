@@ -1,5 +1,8 @@
+#ifndef lib_circular_buffer_h
+#define lib_circular_buffer_h
+
 #include <Arduino.h>
-#include <utils.h>
+#include <lib_utils.h>
 
 struct CircularBuffer {
   int32_t data[5]; // circular buffer
@@ -70,3 +73,5 @@ int32_t printCircularBuffer(char* buf, CircularBuffer* b, bool newLine = true) {
     }
     return n;
 }
+
+#endif
