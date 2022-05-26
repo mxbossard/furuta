@@ -1,49 +1,74 @@
 #ifndef lib_rotary_encoder_controller_spi_slave_h
 #define lib_rotary_encoder_controller_spi_slave_h
 
-#include <SlaveSPI.h>
-#include <SPI.h>
-
 #include <lib_rotary_encoder_controller.h>
 
-SPISettings spi_setting(1000000, MSBFIRST, SPI_MODE);
-SlaveSPI slave(HSPI_HOST);  // VSPI_HOST
 
-#include "SimpleArray.h"
-typedef SimpleArray<uint8_t, int> array_t;
+#define SOC_SPI_MAXIMUM_BUFFER_SIZE 128
+#define SPI_DMA_DISABLED 1
+#include <ESP32SPISlave.h>
 
-array_t master_msg(SPI_DEFAULT_MAX_BUFFER_SIZE);
-array_t slave_msg(SPI_DEFAULT_MAX_BUFFER_SIZE);
+static constexpr uint8_t VSPI_SS {SS};  // default: GPIO 5
+ESP32SPISlave slave;
 
-void printHex(array_t arr) {
-    for (int i = 0; i < arr.length(); i++) {
-        Serial.print(arr[i], HEX);
-        Serial.print(" ");
-    }
-}
+static const uint32_t BUFFER_SIZE {SPI_WORD_SIZE};
+uint8_t spi_slave_tx_buf[BUFFER_SIZE];
+uint8_t spi_slave_rx_buf[BUFFER_SIZE];
 
-void printlnHex(array_t arr) {
-    printHex(arr);
-    Serial.println();
-}
-
-int callback_after_slave_tx_finish() {
-    // Serial.println("[slave_tx_finish] slave transmission has been finished!");
-    // Serial.println(slave[0]);
-
-    return 0;
+void set_buffer(uint8_t* buff, const size_t size) {
+    memset(buff, 0, size);
 }
 
 void spiSlaveSetup() {
-    // Setup Slave-SPI
-    // slave.begin(SO, SI, SCLK, SS, 8, callback_after_slave_tx_finish);  // seems to work with groups of 4 bytes
-    // slave.begin(SO, SI, SCLK, SS, 4, callback_after_slave_tx_finish);
-    slave.begin(SPI_MISO, SPI_MOSI, SPI_SCLK, SPI_CS, SPI_WORD_SIZE, callback_after_slave_tx_finish);
-    // slave.begin(SO, SI, SCLK, SS, 1, callback_after_slave_tx_finish);  // at least 2 word in an SPI frame
+    set_buffer(spi_slave_tx_buf, SPI_WORD_SIZE);
+    set_buffer(spi_slave_rx_buf, SPI_WORD_SIZE);
+
+    slave.setDataMode(SPI_MODE0);
+    slave.begin(VSPI, SPI_CLK, SPI_MISO, SPI_MOSI, SPI_CS);
+
+    delay(2000);
 }
 
+int counter = 0;
 void spiSlaveProcess() {
-   
+    // if there is no transaction in queue, add transaction
+    if (slave.remained() == 0) {
+
+        //sensorsMessage(sensorsMessageBuffer);
+        String message = "Hello World " + String(counter, DEC);
+        message.concat(" !!!");
+        message.toCharArray((char*)spi_slave_tx_buf, SPI_WORD_SIZE);
+
+        Serial.printf("Sending data: ");
+        for (int32_t k = 0; k < SPI_WORD_SIZE; k++) {
+            Serial.printf("%d ", spi_slave_tx_buf[k]);
+        }
+        Serial.println();
+        //memcpy(&spi_slave_tx_buf, spi_slave_tx_buf, message.length());
+
+
+        slave.queue(spi_slave_rx_buf, spi_slave_tx_buf, BUFFER_SIZE);
+
+        // Blink led
+        counter ++;
+        digitalWrite(LED_PIN, counter % 2);
+    }
+
+    // if transaction has completed from master,
+    // available() returns size of results of transaction,
+    // and buffer is automatically updated
+
+    while (slave.available()) {
+        slave.pop();
+
+
+        // show received data
+        // for (size_t i = 0; i < BUFFER_SIZE; ++i) {
+        //     printf("%d ", spi_slave_rx_buf[i]);
+        // }
+        // printf("\n");
+
+    }
 }
 
 #endif

@@ -1,7 +1,7 @@
 #ifndef lib_rotary_encoder_simulator_h
 #define lib_rotary_encoder_simulator_h
 
-//#include <Arduino.h>
+#include <Arduino.h>
 
 #include <lib_utils.h>
 #include <lib_model.h>

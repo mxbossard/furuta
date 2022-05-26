@@ -1,7 +1,7 @@
 #ifndef lib_rotary_encoder_controller_h
 #define lib_rotary_encoder_controller_h
 
-//#include <Arduino.h>
+#include <Arduino.h>
 #include <SPI.h>
 #include <inttypes.h>
 
@@ -34,7 +34,6 @@ void IRAM_ATTR moveSensor1A() {
         sensor1.position --;
         portEXIT_CRITICAL(&mux);
     }
-
     //sensor1.position = absMod32(sensor1.position, sensor1.maxPosition);
 }
 
@@ -55,7 +54,6 @@ void IRAM_ATTR moveSensor1B() {
         sensor1.position --;
         portEXIT_CRITICAL(&mux);
     }
-
     //sensor1.position = absMod32(sensor1.position, sensor1.maxPosition);
 }
 

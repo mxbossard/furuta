@@ -2,7 +2,6 @@
 #define lib_rotary_encoder_controller_spi_slave_h
 
 #define SPI_DMA_CH_AUTO 1
-//#define SOC_SPI_MAXIMUM_BUFFER_SIZE 256
 #include <ESP32DMASPISlave.h>
 
 #include <lib_rotary_encoder_controller.h>
@@ -50,8 +49,9 @@ void spiSlaveProcess() {
     while (slave.available()) {
         slave.pop();
 
-        sensorsMessage(sensorsMessageBuffer);
-        memcpy(&spi_slave_tx_buf, sensorsMessageBuffer, sizeof(float));
+        //sensorsMessage(sensorsMessageBuffer);
+        String message = "Hello !";
+        memcpy(&spi_slave_tx_buf, message.c_str(), message.length());
 
 
         // show received data
