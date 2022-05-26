@@ -1,7 +1,7 @@
 #ifndef lib_circular_buffer_h
 #define lib_circular_buffer_h
 
-#include <Arduino.h>
+//#include <Arduino.h>
 #include <lib_utils.h>
 
 struct CircularBuffer {

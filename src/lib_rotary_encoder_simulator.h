@@ -1,18 +1,10 @@
 #ifndef lib_rotary_encoder_simulator_h
 #define lib_rotary_encoder_simulator_h
 
-#include <Arduino.h>
+//#include <Arduino.h>
 
 #include <lib_utils.h>
 #include <lib_model.h>
-
-#define SIMUL_1_PIN_A 25
-#define SIMUL_1_PIN_B 26
-#define SIMUL_1_PIN_INDEX 27
-
-#define SIMUL_2_PIN_A 14
-#define SIMUL_2_PIN_B 12
-#define SIMUL_2_PIN_INDEX 13
 
 AngleSensorSimulator simul1 = {SIMUL_1_PIN_A, SIMUL_1_PIN_B, SIMUL_1_PIN_INDEX, 0, 0, true, "simula1"};
 AngleSensorSimulator simul2 = {SIMUL_2_PIN_A, SIMUL_2_PIN_B, SIMUL_2_PIN_INDEX, 0, 0, true, "simula2"};

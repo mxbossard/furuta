@@ -1,4 +1,20 @@
-#include <Arduino.h>
+//#include <Arduino.h>
+
+#define SENSOR_1_PIN_A 36
+#define SENSOR_1_PIN_B 37
+#define SENSOR_1_PIN_INDEX 38
+
+#define SENSOR_2_PIN_A 39
+#define SENSOR_2_PIN_B 34
+#define SENSOR_2_PIN_INDEX 35
+
+#define SIMUL_1_PIN_A 25
+#define SIMUL_1_PIN_B 26
+#define SIMUL_1_PIN_INDEX 27
+
+#define SIMUL_2_PIN_A 14
+#define SIMUL_2_PIN_B 12
+#define SIMUL_2_PIN_INDEX 13
 
 #include <lib_rotary_encoder_controller.h>
 #include <lib_rotary_encoder_simulator.h>

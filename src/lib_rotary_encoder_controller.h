@@ -1,21 +1,13 @@
 #ifndef lib_rotary_encoder_controller_h
 #define lib_rotary_encoder_controller_h
 
-#include <Arduino.h>
+//#include <Arduino.h>
 #include <SPI.h>
 #include <inttypes.h>
 
 #include <lib_utils.h>
 #include <lib_circular_buffer.h>
 #include <lib_model.h>
-
-#define SENSOR_1_PIN_A 36
-#define SENSOR_1_PIN_B 37
-#define SENSOR_1_PIN_INDEX 38
-
-#define SENSOR_2_PIN_A 39
-#define SENSOR_2_PIN_B 34
-#define SENSOR_2_PIN_INDEX 35
 
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
