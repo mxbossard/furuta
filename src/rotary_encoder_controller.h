@@ -1,4 +1,4 @@
-//#include <Arduino.h>
+#include <Arduino.h>
 
 #define SPI_MISO (gpio_num_t) 19
 #define SPI_MOSI (gpio_num_t) 23

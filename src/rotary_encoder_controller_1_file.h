@@ -1,12 +1,158 @@
-#ifndef lib_rotary_encoder_controller_h
-#define lib_rotary_encoder_controller_h
-
 #include <Arduino.h>
 #include <inttypes.h>
 
-#include <lib_utils.h>
-#include <lib_circular_buffer.h>
-#include <lib_model.h>
+#define SENSOR_1_PIN_A 36
+#define SENSOR_1_PIN_B 37
+#define SENSOR_1_PIN_INDEX 38
+
+#define SENSOR_2_PIN_A 39
+#define SENSOR_2_PIN_B 34
+#define SENSOR_2_PIN_INDEX 35
+
+#define LED_PIN 2
+
+
+int32_t absMod32(int32_t a, uint16_t b) {
+    int32_t c = a % b;
+    return (c < 0) ? c + b : c;
+}
+
+void initArray(int32_t* a) {
+    size_t length = sizeof(a) / sizeof(a[0]);
+    for (int8_t k = 0 ; k < length ; k ++) {
+        a[k] = 0;
+    }
+}
+
+int32_t printArray(char* buf, int32_t a[], int32_t size) {
+    // Serial.printf("size: %d ", size);
+    String message = "[";
+    String data = String(a[0]);
+    message.concat(data);
+    for (int32_t k = 1; k < size; k ++) {
+        message.concat("; ");
+        String data = String(a[k]);
+        message.concat(data);
+    }
+    message.concat("]");
+    return sprintf(buf, message.c_str());
+}
+
+bool calcEvenParity(uint16_t payload) {
+    //Serial.printf("payload: 0x%04x ; ", payload);
+
+    // Exclude parity bit (Most Significatif Bit)
+    byte bitCount = sizeof(payload) * 8;
+    byte cnt = 0;
+	byte i;
+
+	for (i = 0; i < bitCount; i++) {
+		if (payload & 0x1) {
+			cnt ++;
+		}
+		payload >>= 1;
+	}
+
+    // Return 1 if odd number of 1 in payload
+    bool result = cnt & 0x1;
+    //Serial.printf("bitCount: %d ; parity: %d\n", bitCount, result);
+    return result;
+}
+
+uint16_t paritize(uint16_t payload) {
+    bool parity = calcEvenParity(payload);
+    return payload | (parity << 15);
+}
+
+
+struct CircularBuffer {
+  int32_t data[5]; // circular buffer
+  int8_t offset;
+  int8_t lastPosition;
+  int32_t buffer[5]; // contains ordered data
+};
+
+size_t sizeCircularBuffer(CircularBuffer b) {
+    size_t size = sizeof(b.data) / sizeof(b.data[0]);
+    return size;
+}
+
+void pushCircularBuffer(CircularBuffer *b, int32_t data) {
+    b->data[b->offset] = data;
+    b->offset ++;
+    b->lastPosition ++;
+
+    size_t length = sizeof(b->data) / sizeof(b->data[0]);
+    if (b->offset >= length) {
+        b->offset = 0;
+    }
+    if (b->lastPosition >= length) {
+        b->lastPosition = 0;
+    }
+}
+
+void resetCircularBuffer(CircularBuffer *b) {
+    size_t length = sizeof(b->data) / sizeof(b->data[0]);
+    // for (int8_t k = 0 ; k < length; k++) {
+    //     pushCircularBuffer(b, 0);
+    // }
+    initArray(b->data);
+    b->offset = 0;
+    b->lastPosition = length - 1;
+}
+
+int32_t getLastDataCircularBuffer(CircularBuffer b) {
+    return b.data[b.lastPosition];
+}
+
+int32_t* getDataArrayCircularBuffer(CircularBuffer* b) {
+    // Copy data array in new buffer: first item is last pushed
+    size_t length = sizeof(b->data) / sizeof(b->data[0]);
+    // Serial.printf("length: %d ", length);
+    //int32_t* buffer = (int32_t *) malloc(length * sizeof(int32_t));
+    int32_t* buffer = b->buffer;
+    for (int32_t k = 0; k < 5; k ++) {
+        int32_t index = b->lastPosition - k;
+        if (index < 0) {
+            index += length;
+        }
+        buffer[k] = b->data[index];
+        // buf[k] = k + 1;
+    }
+    //length = sizeof(buffer) / sizeof(buffer[0]);
+    // Serial.printf("length: %d ", length);
+    return buffer;
+}
+
+int32_t printCircularBuffer(char* buf, CircularBuffer* b, bool newLine = true) {
+    int32_t n = sprintf(buf, "CircularBuffer: ");
+    int32_t* data = getDataArrayCircularBuffer(b);
+    int32_t size = sizeCircularBuffer(*b);
+    n += printArray(buf, data, size);
+    if (newLine) {
+        n += sprintf(buf, "\n");
+    }
+    return n;
+}
+
+struct AngleSensor {
+    const uint8_t pinA;
+    const uint8_t pinB;
+    const uint8_t pinIndex;
+    const uint16_t maxPosition;
+    int32_t position;
+    const char* name;
+};
+
+struct AngleSensorSimulator {
+  const uint8_t pinA;
+  const uint8_t pinB;
+  const uint8_t pinIndex;
+  int32_t position;
+  int32_t counter;
+  bool enabled;
+  const char* name;
+};
 
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
@@ -218,4 +364,16 @@ void controllerSetup() {
     attachInterrupt(sensor2.pinIndex, resetSensor2, RISING);
 }
 
-#endif
+void setup() {
+    Serial.begin(115200);
+
+    controllerSetup();
+
+    pinMode(LED_PIN, OUTPUT);
+}
+
+void loop() {
+    delay(100);
+
+    printSensors();
+}

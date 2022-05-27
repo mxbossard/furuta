@@ -1,7 +1,7 @@
 #ifndef lib_model_h
 #define lib_model_h
 
-//#include <Arduino.h>
+#include <Arduino.h>
 
 struct AngleSensor {
     const uint8_t pinA;
