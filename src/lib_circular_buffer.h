@@ -1,19 +1,19 @@
 #ifndef lib_circular_buffer_h
 #define lib_circular_buffer_h
 
-//#include <Arduino.h>
+#include <Arduino.h>
 #include <lib_utils.h>
 
 struct CircularBuffer {
-  int32_t data[5]; // circular buffer
-  int8_t offset;
-  int8_t lastPosition;
-  int32_t buffer[5]; // contains ordered data
+    size_t size;
+    int32_t* data; // circular buffer
+    int8_t offset;
+    int8_t lastPosition;
+    int32_t* buffer; // contains ordered data
 };
 
 size_t sizeCircularBuffer(CircularBuffer b) {
-    size_t size = sizeof(b.data) / sizeof(b.data[0]);
-    return size;
+    return b.size;
 }
 
 void pushCircularBuffer(CircularBuffer *b, int32_t data) {
@@ -21,23 +21,28 @@ void pushCircularBuffer(CircularBuffer *b, int32_t data) {
     b->offset ++;
     b->lastPosition ++;
 
-    size_t length = sizeof(b->data) / sizeof(b->data[0]);
-    if (b->offset >= length) {
+    if (b->offset >= b->size) {
         b->offset = 0;
     }
-    if (b->lastPosition >= length) {
+    if (b->lastPosition >= b->size) {
         b->lastPosition = 0;
     }
 }
 
 void resetCircularBuffer(CircularBuffer *b) {
-    size_t length = sizeof(b->data) / sizeof(b->data[0]);
-    // for (int8_t k = 0 ; k < length; k++) {
-    //     pushCircularBuffer(b, 0);
-    // }
-    initArray(b->data);
+    initArray(b->data, b->size);
+    initArray(b->buffer, b->size);
     b->offset = 0;
-    b->lastPosition = length - 1;
+    b->lastPosition = b->size - 1;
+}
+
+void initCircularBuffer(CircularBuffer *b, size_t size) {
+    b->size = size;
+    int32_t* data = (int32_t*) malloc(sizeof(int32_t) * size);
+    int32_t* buffer = (int32_t*) malloc(sizeof(int32_t) * size);
+    b->data = data;
+    b->buffer = buffer;
+    resetCircularBuffer(b);
 }
 
 int32_t getLastDataCircularBuffer(CircularBuffer b) {
@@ -46,19 +51,15 @@ int32_t getLastDataCircularBuffer(CircularBuffer b) {
 
 int32_t* getDataArrayCircularBuffer(CircularBuffer* b) {
     // Copy data array in new buffer: first item is last pushed
-    size_t length = sizeof(b->data) / sizeof(b->data[0]);
     // Serial.printf("length: %d ", length);
-    //int32_t* buffer = (int32_t *) malloc(length * sizeof(int32_t));
     int32_t* buffer = b->buffer;
     for (int32_t k = 0; k < 5; k ++) {
         int32_t index = b->lastPosition - k;
         if (index < 0) {
-            index += length;
+            index += b->size;
         }
         buffer[k] = b->data[index];
-        // buf[k] = k + 1;
     }
-    //length = sizeof(buffer) / sizeof(buffer[0]);
     // Serial.printf("length: %d ", length);
     return buffer;
 }

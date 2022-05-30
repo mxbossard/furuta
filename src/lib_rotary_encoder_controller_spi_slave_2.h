@@ -15,6 +15,8 @@ static const uint32_t BUFFER_SIZE {SPI_WORD_SIZE};
 uint8_t spi_slave_tx_buf[BUFFER_SIZE];
 uint8_t spi_slave_rx_buf[BUFFER_SIZE];
 
+uint8_t datagramBuffer[BUFFER_SIZE];
+
 void set_buffer(uint8_t* buff, const size_t size) {
     memset(buff, 0, size);
 }
@@ -22,6 +24,7 @@ void set_buffer(uint8_t* buff, const size_t size) {
 void spiSlaveSetup() {
     set_buffer(spi_slave_tx_buf, SPI_WORD_SIZE);
     set_buffer(spi_slave_rx_buf, SPI_WORD_SIZE);
+    set_buffer(datagramBuffer, SPI_WORD_SIZE);
 
     slave.setDataMode(SPI_MODE0);
     slave.begin(VSPI, SPI_CLK, SPI_MISO, SPI_MOSI, SPI_CS);
@@ -44,6 +47,11 @@ void spiSlaveProcess() {
             Serial.printf("%d ", spi_slave_tx_buf[k]);
         }
         Serial.println();
+
+        printSensors();
+        sensorDatagram(sensor1, &timings1, datagramBuffer, 0);
+        decodeDatagram(datagramBuffer, 32);
+
         //memcpy(&spi_slave_tx_buf, spi_slave_tx_buf, message.length());
 
 
