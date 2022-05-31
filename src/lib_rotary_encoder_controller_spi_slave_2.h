@@ -38,18 +38,19 @@ void spiSlaveProcess() {
     if (slave.remained() == 0) {
 
         //sensorsMessage(sensorsMessageBuffer);
-        String message = "Hello World " + String(counter, DEC);
-        message.concat(" !!!");
-        message.toCharArray((char*)spi_slave_tx_buf, SPI_WORD_SIZE);
+        // String message = "Hello World " + String(counter, DEC);
+        // message.concat(" !!!");
+        // message.toCharArray((char*)spi_slave_tx_buf, SPI_WORD_SIZE);
 
-        Serial.printf("Sending data: ");
-        for (int32_t k = 0; k < SPI_WORD_SIZE; k++) {
-            Serial.printf("%d ", spi_slave_tx_buf[k]);
-        }
-        Serial.println();
+        // Serial.printf("Sending data: ");
+        // for (int32_t k = 0; k < SPI_WORD_SIZE; k++) {
+        //     Serial.printf("%d ", spi_slave_tx_buf[k]);
+        // }
+        // Serial.println();
 
-        printSensors();
-        sensorDatagram(sensor1, &timings1, datagramBuffer, 0);
+        //int64_t now = esp_timer_get_time();
+        //printSensors(now);
+        sensorDatagram(sensor1, timings1, datagramBuffer, 0);
         decodeDatagram(datagramBuffer, 32);
 
         //memcpy(&spi_slave_tx_buf, spi_slave_tx_buf, message.length());

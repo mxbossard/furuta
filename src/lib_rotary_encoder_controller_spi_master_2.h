@@ -1,7 +1,7 @@
 #ifndef lib_rotary_encoder_controller_spi_master_h
 #define lib_rotary_encoder_controller_spi_master_h
 
-//#include <Arduino.h>
+#include <Arduino.h>
 #include <SPI.h>
 
 static constexpr uint8_t VSPI_SS {5};  // default: GPIO 5

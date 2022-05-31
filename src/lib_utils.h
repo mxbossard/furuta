@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 
-
 int32_t absMod32(int32_t a, uint16_t b) {
     int32_t c = a % b;
     return (c < 0) ? c + b : c;
@@ -15,25 +14,36 @@ uint16_t absMod16(int32_t a, uint16_t b) {
     return (uint16_t) c;
 }
 
-void initArray(int32_t* a, size_t size) {
-    //size_t length = sizeof(a) / sizeof(a[0]);
-    for (int8_t k = 0 ; k < size ; k ++) {
-        a[k] = 0;
+void initArray32(int32_t* a, size_t size) {
+    memset(a, 0, size);
+}
+
+void initArray64(int64_t* a, size_t size) {
+    for (size_t k = 0; k < size; k++) {
+        a[k] = 0ULL;
     }
 }
 
-int32_t printArray(char* buf, int32_t a[], int32_t size) {
-    // Serial.printf("size: %d ", size);
-    String message = "[";
-    String data = String(a[0]);
-    message.concat(data);
-    for (int32_t k = 1; k < size; k ++) {
-        message.concat("; ");
-        String data = String(a[k]);
-        message.concat(data);
+// Convert int64 to int32 without overflowing.
+int32_t int64to32(int64_t i) {
+    int32_t val;
+    if (i > (int64_t)INT32_MAX) {
+        val = INT32_MAX;
+    } else if (i < (int64_t)INT32_MIN) {
+        val = INT32_MIN;
+    } else {
+        val = (int32_t) i;
     }
-    message.concat("]");
-    return sprintf(buf, message.c_str());
+    return val;
+} 
+
+int32_t printArray64as32(char* buf, int64_t* a, size_t size) {
+    int32_t n = sprintf(buf, "[%d", int64to32(a[0]));
+    for (size_t k = 1; k < size; k ++) {
+        n += sprintf(&(buf[n]), "; %d", int64to32(a[k]));
+    }
+    n += sprintf(&(buf[n]), "]");
+    return n;
 }
 
 bool calcEvenParity(uint16_t payload) {

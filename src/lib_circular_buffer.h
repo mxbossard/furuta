@@ -6,17 +6,16 @@
 
 struct CircularBuffer {
     size_t size;
-    int32_t* data; // circular buffer
+    int64_t* data; // circular buffer
     int8_t offset;
     int8_t lastPosition;
-    int32_t* buffer; // contains ordered data
 };
 
 size_t sizeCircularBuffer(CircularBuffer b) {
     return b.size;
 }
 
-void pushCircularBuffer(CircularBuffer *b, int32_t data) {
+void pushCircularBuffer(CircularBuffer *b, int64_t data) {
     b->data[b->offset] = data;
     b->offset ++;
     b->lastPosition ++;
@@ -30,45 +29,38 @@ void pushCircularBuffer(CircularBuffer *b, int32_t data) {
 }
 
 void resetCircularBuffer(CircularBuffer *b) {
-    initArray(b->data, b->size);
-    initArray(b->buffer, b->size);
+    initArray64(b->data, b->size);
     b->offset = 0;
     b->lastPosition = b->size - 1;
 }
 
-void initCircularBuffer(CircularBuffer *b, size_t size) {
-    b->size = size;
-    int32_t* data = (int32_t*) malloc(sizeof(int32_t) * size);
-    int32_t* buffer = (int32_t*) malloc(sizeof(int32_t) * size);
-    b->data = data;
-    b->buffer = buffer;
-    resetCircularBuffer(b);
+void initCircularBuffer(CircularBuffer *cb, size_t size) {
+    cb->size = size;
+    int64_t* data = (int64_t*) malloc(sizeof(int64_t) * size);
+    cb->data = data;
+    resetCircularBuffer(cb);
 }
 
-int32_t getLastDataCircularBuffer(CircularBuffer b) {
-    return b.data[b.lastPosition];
+int64_t getLastDataCircularBuffer(CircularBuffer cb) {
+    return cb.data[cb.lastPosition];
 }
 
-int32_t* getDataArrayCircularBuffer(CircularBuffer* b) {
+void getDataArrayCircularBuffer(CircularBuffer cb, int64_t* buffer, size_t size) {
     // Copy data array in new buffer: first item is last pushed
-    // Serial.printf("length: %d ", length);
-    int32_t* buffer = b->buffer;
-    for (int32_t k = 0; k < 5; k ++) {
-        int32_t index = b->lastPosition - k;
+    for (size_t k = 0; k < size; k ++) {
+        int16_t index = cb.lastPosition - k;
         if (index < 0) {
-            index += b->size;
+            index += cb.size;
         }
-        buffer[k] = b->data[index];
+        buffer[k] = cb.data[index];
     }
-    // Serial.printf("length: %d ", length);
-    return buffer;
 }
 
-int32_t printCircularBuffer(char* buf, CircularBuffer* b, bool newLine = true) {
+int64_t* orderedData = (int64_t*) malloc(sizeof(int64_t) * 128);
+int32_t printCircularBuffer(char* buf, CircularBuffer cb, bool newLine = true) {
     int32_t n = sprintf(buf, "CircularBuffer: ");
-    int32_t* data = getDataArrayCircularBuffer(b);
-    int32_t size = sizeCircularBuffer(*b);
-    n += printArray(buf, data, size);
+    getDataArrayCircularBuffer(cb, orderedData, cb.size);
+    n += printArray64as32(buf, orderedData, cb.size);
     if (newLine) {
         n += sprintf(buf, "\n");
     }

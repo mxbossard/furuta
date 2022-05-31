@@ -27,6 +27,7 @@ void setup() {
     spiSlaveSetup();
 
     pinMode(LED_PIN, OUTPUT);
+
 }
 
 void loop() {
