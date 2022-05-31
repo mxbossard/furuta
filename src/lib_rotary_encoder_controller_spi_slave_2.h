@@ -24,7 +24,7 @@ void set_buffer(uint8_t* buff, const size_t size) {
 void spiSlaveSetup() {
     set_buffer(spi_slave_tx_buf, SPI_WORD_SIZE);
     set_buffer(spi_slave_rx_buf, SPI_WORD_SIZE);
-    set_buffer(datagramBuffer, SPI_WORD_SIZE);
+    //set_buffer(datagramBuffer, SPI_WORD_SIZE);
 
     slave.setDataMode(SPI_MODE0);
     slave.begin(VSPI, SPI_CLK, SPI_MISO, SPI_MOSI, SPI_CS);
@@ -50,8 +50,8 @@ void spiSlaveProcess() {
 
         //int64_t now = esp_timer_get_time();
         //printSensors(now);
-        sensorDatagram(sensor1, timings1, datagramBuffer, 0);
-        decodeDatagram(datagramBuffer, 32);
+        buildDatagram(spi_slave_tx_buf);
+        decodeDatagram(spi_slave_tx_buf, BUFFER_SIZE);
 
         //memcpy(&spi_slave_tx_buf, spi_slave_tx_buf, message.length());
 

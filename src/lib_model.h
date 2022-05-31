@@ -17,6 +17,7 @@ struct AngleSensorSimulator {
   const uint8_t pinA;
   const uint8_t pinB;
   const uint8_t pinIndex;
+  const uint16_t maxPosition;
   int32_t counter;
   int32_t position;
   bool enabled;

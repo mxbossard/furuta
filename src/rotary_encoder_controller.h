@@ -4,8 +4,6 @@
 #define SPI_MOSI (gpio_num_t) 23
 #define SPI_CLK (gpio_num_t) 18
 #define SPI_CS   (gpio_num_t) 5
-//#define SPI_FREQUENCY 100000
-#define SPI_WORD_SIZE 32
 
 #define SENSOR_1_PIN_A (gpio_num_t) 36
 #define SENSOR_1_PIN_B (gpio_num_t) 39
@@ -17,6 +15,7 @@
 
 #define LED_PIN (gpio_num_t) 22
 
+#include <rotary_encoder_config.h>
 #include <lib_rotary_encoder_controller.h>
 #include <lib_rotary_encoder_controller_spi_slave_2.h>
 

@@ -7,8 +7,7 @@
 #include <lib_utils.h>
 #include <lib_circular_buffer.h>
 #include <lib_model.h>
-
-#define SPEEDS_COUNT 10
+#include <lib_datagram.h>
 
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
@@ -106,48 +105,27 @@ void IRAM_ATTR resetSensor2() {
     portEXIT_CRITICAL(&mux);
 }
 
-int64_t* data = (int64_t*) malloc(sizeof(int64_t) * SPEEDS_COUNT);
-int64_t* speeds = (int64_t*) malloc(sizeof(int64_t) * SPEEDS_COUNT);
-int64_t* calculateSpeeds0(CircularBuffer cb, int64_t now) {
-    getDataArrayCircularBuffer(cb, data, cb.size);
+int64_t* timingsBuffer1 = (int64_t*) malloc(sizeof(int64_t) * SPEEDS_COUNT_TO_KEEP);
+int64_t* timingsBuffer2 = (int64_t*) malloc(sizeof(int64_t) * SPEEDS_COUNT_TO_KEEP);
+int64_t* speedsBuffer1 = (int64_t*) malloc(sizeof(int64_t) * SPEEDS_COUNT_TO_KEEP);
+int64_t* speedsBuffer2 = (int64_t*) malloc(sizeof(int64_t) * SPEEDS_COUNT_TO_KEEP);
 
-    for (size_t k = cb.size - 1 ; k > 0 ; k --) {
-        // Calculate instantaneous speed between timings
-        if (data[k] > 0) {
-            speeds[k] = abs(data[k - 1]) - data[k];
-        } else {
-            speeds[k] = - abs(data[k - 1]) - data[k];
-        }
-    }
-
-    // Last speed is calculated with current time
-    if (data[0] >= 0) {
-        speeds[0] = now - data[0];
-    } else {
-        speeds[0] = - now - data[0];
-    }
-
-    return speeds;
-}
-
-int64_t* calculateSpeeds2(int64_t* data, size_t size, int64_t now) {
+void calculateSpeeds(int64_t* timings, int64_t* speedBuffer, size_t size, int64_t now) {
     for (size_t k = size - 1 ; k > 0 ; k --) {
         // Calculate instantaneous speed between timings
-        if (data[k] > 0) {
-            speeds[k] = abs(data[k - 1]) - data[k];
+        if (timings[k] > 0) {
+            speedBuffer[k] = abs(timings[k - 1]) - timings[k];
         } else {
-            speeds[k] = - abs(data[k - 1]) - data[k];
+            speedBuffer[k] = - abs(timings[k - 1]) - timings[k];
         }
     }
 
     // Last speed is calculated with current time
-    if (data[0] >= 0) {
-        speeds[0] = now - data[0];
+    if (timings[0] >= 0) {
+        speedBuffer[0] = now - timings[0];
     } else {
-        speeds[0] = - now - data[0];
+        speedBuffer[0] = - now - timings[0];
     }
-
-    return speeds;
 }
 
 int32_t speedsMessage(char* buf, int64_t* speeds, size_t size) {
@@ -170,26 +148,17 @@ const char* sensorMessage(AngleSensor sensor, int64_t* speeds, size_t speedSize)
 }
 
 int32_t sensorsMessage(char* buf, int64_t now) {
-    // FIXME: probleme sur les overflow des timings.
-    int64_t* speeds1 = calculateSpeeds0(timings1, now);
-    int64_t* speeds2 = calculateSpeeds0(timings2, now);
+    getDataArrayCircularBuffer(timings1, timingsBuffer1, timings1.size);
+    getDataArrayCircularBuffer(timings2, timingsBuffer2, timings2.size);
+    calculateSpeeds(timingsBuffer1, speedsBuffer1, timings1.size, now);
+    calculateSpeeds(timingsBuffer2, speedsBuffer2, timings2.size, now);
 
     int32_t n = sprintf(buf, "[%s] position: %d ", sensor1.name, sensor1.position);
-    n += speedsMessage(&buf[n], speeds1, timings1.size);
+    n += speedsMessage(&buf[n], speedsBuffer1, timings1.size);
     n += sprintf(&buf[n], " ; [%s] position: %d ", sensor2.name, sensor2.position);
-    n += speedsMessage(&buf[n], speeds2, timings2.size);
+    n += speedsMessage(&buf[n], speedsBuffer2, timings2.size);
     return n;
 }
-
-/*
-void printSensor(AngleSensor sensor, CircularBuffer* timings, int64_t now, bool newLine = true) {
-    const char* msg = sensorMessage(sensor, timings);
-    Serial.printf("%s", msg);
-    if (newLine) {
-        Serial.println();
-    }
-}
-*/
 
 char* sensorsMessageBuffer = (char*) malloc(sizeof(char) * 256);
 void printSensors(int64_t now) {
@@ -208,14 +177,36 @@ void printTimings(int64_t* timings, size_t size) {
 }
 
 uint8_t datagramCounter = 0;
-int16_t sensorDatagram(AngleSensor sensor, CircularBuffer cb, uint8_t* buffer, int16_t position) {
+size_t buildDatagram(uint8_t* buffer) {
+    int64_t now = esp_timer_get_time();
+    
+    portENTER_CRITICAL(&mux);
+    // Copy timings and position in a transaction
+
+    // Timings
+    getDataArrayCircularBuffer(timings1, timingsBuffer1, timings1.size);
+    getDataArrayCircularBuffer(timings2, timingsBuffer2, timings2.size);
+
+    int16_t position1 = sensor1.position;
+    int16_t position2 = sensor2.position;
+
+    portEXIT_CRITICAL(&mux);
+
+    int64_t endTransaction = esp_timer_get_time();
+
+    // Speeds
+    calculateSpeeds(timingsBuffer1, speedsBuffer1, timings1.size, now);
+    calculateSpeeds(timingsBuffer2, speedsBuffer2, timings2.size, now);
+
+    int64_t endSpeedsCalculation = esp_timer_get_time();
+
     // Sensor Datagram :
     // CRC8 on 1 byte
     // Header on 1 byte (Parity, Speed counts, redondancy, ...)
     // sensor position on 2 bytes
     // Each speed on 2 bytes
 
-    int16_t p = position;
+    size_t p = 0;
 
     // Room for CRC8
     p += 1;
@@ -223,65 +214,66 @@ int16_t sensorDatagram(AngleSensor sensor, CircularBuffer cb, uint8_t* buffer, i
     // Header
     buffer[p] = datagramCounter & 0x0F; // 4 bits counter
     p += 1;
-    
-    int64_t now = esp_timer_get_time();
 
-    portENTER_CRITICAL(&mux);
-
-    // Speeds
-    getDataArrayCircularBuffer(cb, data, cb.size);
-
-    // Position
-    buffer[p] = sensor.position >> 8;
-    buffer[p+1] = sensor.position;
+    // Position 1
+    buffer[p] = position1 >> 8;
+    buffer[p+1] = position1;
     p += 2;
 
-    portEXIT_CRITICAL(&mux);
-
-    int64_t* speeds = calculateSpeeds2(data, cb.size, now);
-    printTimings(data, cb.size);
-    printSpeeds(speeds, cb.size);
-
-    for (int16_t k = 0; k < cb.size; k++) {
-        // Borne speed to int16_t format
-        int64_t limitedSpeed = speeds[k];
-        if (limitedSpeed < (int64_t)INT32_MIN) {
-            limitedSpeed = INT32_MIN;
-        } else if (limitedSpeed > (int64_t)INT32_MAX) {
-            limitedSpeed = INT32_MAX;
-        }
+    // Speeds 1
+    for (size_t k = 0; k < timings1.size; k++) {
+        // Limit speed to int16_t format
+        int16_t limitedSpeed = int64toInt16(speedsBuffer1[k]);
         buffer[p] = limitedSpeed >> 8;
         buffer[p+1] = limitedSpeed;
         //Serial.printf("int32: 0x%08X (%d) ; int16: %d ; int16: 0x%02X%02X\n", speeds[k], speeds[k], speed, buffer[p], buffer[p+1]);
         p += 2;
     }
 
-    // CRC8 at first position
-    buffer[position] = crc8(&buffer[position], position - p);
+    // Position 2
+    buffer[p] = position2 >> 8;
+    buffer[p+1] = position2;
+    p += 2;
 
+    // Speeds 2
+    for (size_t k = 0; k < timings2.size; k++) {
+        // Limit speed to int16_t format
+        int16_t limitedSpeed = int64toInt16(speedsBuffer2[k]);
+        buffer[p] = limitedSpeed >> 8;
+        buffer[p+1] = limitedSpeed;
+        //Serial.printf("int32: 0x%08X (%d) ; int16: %d ; int16: 0x%02X%02X\n", speeds[k], speeds[k], speed, buffer[p], buffer[p+1]);
+        p += 2;
+    }
+
+    int64_t endDatagramBuild = esp_timer_get_time();
+
+    // CRC8 at first position
+    buffer[0] = crc8(&buffer[1], p - 1);
+
+    int64_t endCrcBuild = esp_timer_get_time();
+
+    
     // Debug
-    Serial.printf("sensor [%s] datagram: ", sensor.name);
-    for (int16_t k = position; k < p; k++) {
+    uint32_t transactionTime = (uint32_t) (endTransaction - now);
+    uint32_t speedsCalculationTime = (uint32_t) (endSpeedsCalculation - endTransaction);
+    uint32_t datagramBuildTime = (uint32_t) (endDatagramBuild - endSpeedsCalculation);
+    uint32_t crcBuildTime = (uint32_t) (endCrcBuild - endDatagramBuild);
+
+    Serial.printf("[Timings] transaction: %dµs ; speeds calc: %dµs ; datagram: %dµs ; crc: %dµs.\n", transactionTime, speedsCalculationTime, datagramBuildTime, crcBuildTime);
+
+    printSensors(now);
+    printTimings(timingsBuffer1, timings1.size);
+    printSpeeds(speedsBuffer1, timings1.size);
+
+    Serial.printf("Datagram: ");
+    for (int16_t k = 0; k < p; k++) {
         Serial.printf("%02X ", buffer[k]);
     }
     Serial.println();
 
     datagramCounter ++;
 
-    return p - position;
-}
-
-void decodeDatagram(uint8_t* buffer, uint16_t wordSize) {
-    Serial.printf("Decoded Datagram: ");
-    uint8_t crc = buffer[0];
-    uint8_t header = buffer[1];
-    uint16_t position = (buffer[2] << 8) + buffer[3];
-
-    int16_t speed0 = (buffer[4] << 8) + buffer[5];
-    int16_t speed1 = (buffer[6] << 8) + buffer[7];
-    int16_t speed2 = (buffer[8] << 8) + buffer[9];
-
-    Serial.printf("CRC: %d Header: %d Position: %d Speed0: %d Speed1: %d Speed2: %d\n", crc, header, position, speed0, speed1, speed2);
+    return p;
 }
 
 void printSensorInputs() {
@@ -296,8 +288,8 @@ const char* positionMessage(AngleSensor sensor) {
 }
 
 void controllerSetup() {
-    initCircularBuffer(&timings1, SPEEDS_COUNT);
-    initCircularBuffer(&timings2, SPEEDS_COUNT);
+    initCircularBuffer(&timings1, SPEEDS_COUNT_TO_KEEP);
+    initCircularBuffer(&timings2, SPEEDS_COUNT_TO_KEEP);
 
     // Sensor 1
     pinMode(sensor1.pinA, INPUT_PULLUP);
