@@ -248,7 +248,7 @@ size_t buildDatagram(uint8_t* buffer) {
     int64_t endDatagramBuild = esp_timer_get_time();
 
     // CRC8 at first position
-    buffer[0] = crc8(&buffer[1], p - 1);
+    buffer[0] = crc8(&buffer[1], SPI_WORD_SIZE - 1);
 
     int64_t endCrcBuild = esp_timer_get_time();
 

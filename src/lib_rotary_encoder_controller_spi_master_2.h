@@ -37,6 +37,13 @@ void spiMasterProcess(uint8_t* data) {
     //     spi_master_rx_buf[i] = master.transfer(spi_master_tx_buf[i]);
     digitalWrite(VSPI_SS, HIGH);
     master.endTransaction();
+
+    // Check CRC8
+    uint8_t calculated = crc8(&data[1], SPI_WORD_SIZE - 1); //45
+    if (data[0] != calculated) {
+        Serial.printf("CRC8 NOT VALID !!! Received CRC8: %d ; Calculated CRC8: %d\n", data[0], calculated);
+    }
+    
 }
 
 #endif

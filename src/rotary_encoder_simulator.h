@@ -34,7 +34,7 @@ int counter = 0;
 uint8_t* messageBuffer = (uint8_t*) malloc(sizeof(uint8_t) * SPI_WORD_SIZE);
 
 void loop() {
-    delay(1000);
+    //delay(1000);
 
     Serial.println("Running simulation ...");
     // testModulo();
@@ -42,7 +42,7 @@ void loop() {
     // printSimulators();
     // printSensors();
 
-    uint32_t periodInUs = 10;
+    uint32_t periodInUs = 1;
 
     indexSimul(simul1, periodInUs);
     // assertCount("Reseting index", sensor1, simul1);
