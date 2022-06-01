@@ -177,7 +177,7 @@ void printTimings(int64_t* timings, size_t size) {
 }
 
 uint8_t datagramCounter = 0;
-size_t buildDatagram(uint8_t* buffer) {
+size_t buildDatagram(uint8_t* buffer, uint8_t marker) {
     int64_t now = esp_timer_get_time();
     
     portENTER_CRITICAL(&mux);
@@ -202,16 +202,22 @@ size_t buildDatagram(uint8_t* buffer) {
 
     // Sensor Datagram :
     // CRC8 on 1 byte
-    // Header on 1 byte (Parity, Speed counts, redondancy, ...)
+    // Length on 1 byte
+    // Marker on 1 byte
+    // Extra header on 1 byte (Parity, Speed counts, redondancy, ...)
     // sensor position on 2 bytes
     // Each speed on 2 bytes
 
     size_t p = 0;
 
-    // Room for CRC8
-    p += 1;
+    // Room for CRC8 and Length
+    p += 2;
 
-    // Header
+    // Marker
+    buffer[p] = marker;
+    p += 1;
+    
+    // Extra header
     buffer[p] = datagramCounter & 0x0F; // 4 bits counter
     p += 1;
 
@@ -247,8 +253,12 @@ size_t buildDatagram(uint8_t* buffer) {
 
     int64_t endDatagramBuild = esp_timer_get_time();
 
+    // Length at second position
+    buffer[1] = p;
+
     // CRC8 at first position
     buffer[0] = crc8(&buffer[1], SPI_WORD_SIZE - 1);
+
 
     int64_t endCrcBuild = esp_timer_get_time();
 

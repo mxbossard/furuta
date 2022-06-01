@@ -137,7 +137,7 @@ static const uint8_t crc8_cdma2000_table[] = {
 };
 
 // FIXME: This CRC8 return 0 for a buffer full of 0 so it is valid for an empty transmission which is bad.
-uint8_t crc8(uint8_t *p, uint8_t len) {
+uint8_t crc8(uint8_t *p, size_t len) {
     uint16_t i;
     uint16_t crc = 0x0;
 
@@ -147,6 +147,24 @@ uint8_t crc8(uint8_t *p, uint8_t len) {
     }
 
     return crc & 0xFF;
+}
+
+void markCrc8(uint8_t *data) {
+    uint8_t length = data[1];
+    uint8_t crc = crc8(data, length);
+    data[0] = crc;
+}
+
+bool checkCrc8(uint8_t *data) {
+    // CRC8 at first position
+    uint8_t received = data[0];
+    uint8_t length = data[1];
+    uint8_t calculated = crc8(&data[1], length - 1);
+    if (received != calculated) {
+        Serial.printf("CRC8 NOT VALID !!! Received: %d but calculated: %d\n", received, calculated);
+        return false;
+    }
+    return true;
 }
 
 #endif

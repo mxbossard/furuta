@@ -34,28 +34,8 @@ void spiSlaveSetup() {
 
 int counter = 0;
 void spiSlaveProcess() {
-    // if there is no transaction in queue, add transaction
     if (slave.remained() == 0) {
-
-        //sensorsMessage(sensorsMessageBuffer);
-        // String message = "Hello World " + String(counter, DEC);
-        // message.concat(" !!!");
-        // message.toCharArray((char*)spi_slave_tx_buf, SPI_WORD_SIZE);
-
-        // Serial.printf("Sending data: ");
-        // for (int32_t k = 0; k < SPI_WORD_SIZE; k++) {
-        //     Serial.printf("%d ", spi_slave_tx_buf[k]);
-        // }
-        // Serial.println();
-
-        //int64_t now = esp_timer_get_time();
-        //printSensors(now);
-        buildDatagram(spi_slave_tx_buf);
-        decodeDatagram(spi_slave_tx_buf, BUFFER_SIZE);
-
-        //memcpy(&spi_slave_tx_buf, spi_slave_tx_buf, message.length());
-
-
+        // if there is no transaction in queue, add a transaction
         slave.queue(spi_slave_rx_buf, spi_slave_tx_buf, BUFFER_SIZE);
 
         // Blink led
@@ -70,6 +50,20 @@ void spiSlaveProcess() {
     while (slave.available()) {
         slave.pop();
 
+        if (checkCrc8(spi_slave_rx_buf)) {
+            uint8_t length = spi_slave_rx_buf[1];
+            uint8_t marker = spi_slave_rx_buf[2];
+            uint8_t extraHeader = spi_slave_rx_buf[3];
+            uint8_t command = spi_slave_rx_buf[4];
+
+            if (command == COMMAND_TIMING) {
+                // Master asked for a Timing
+                buildDatagram(spi_slave_tx_buf, marker);
+                decodeDatagram(spi_slave_tx_buf, length);
+            } else if (command == COMMAND_READ) {
+                // Master asked for a READ
+            }
+        }
 
         // show received data
         // for (size_t i = 0; i < BUFFER_SIZE; ++i) {

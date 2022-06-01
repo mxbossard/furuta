@@ -78,9 +78,10 @@ void loop() {
     moveBothSimulators(true, 11, false, 7, periodInUs);
     // assertCount("Turning 11 steps right", sensor1, simul1);
     // assertCount("Turning 7 steps left", sensor2, simul2);
-    
-    spiMasterProcess(messageBuffer);
-    decodeDatagram(messageBuffer, SPI_WORD_SIZE);
+
+    spiMasterProcess(messageBuffer, COMMAND_TIMING);
+    delay(1);
+    spiMasterProcess(messageBuffer, COMMAND_READ);
 
     moveBothSimulators(true, 101, true, 101, periodInUs);
     // assertCount("Turning 101 steps right", sensor1, simul1);
@@ -99,7 +100,10 @@ void loop() {
 
     testPendulum(2000, 500, 12, periodInUs);
 
-    spiMasterProcess(messageBuffer);
+    spiMasterProcess(messageBuffer, COMMAND_TIMING);
+    delay(1);
+    spiMasterProcess(messageBuffer, COMMAND_READ);
+
     decodeDatagram(messageBuffer, SPI_WORD_SIZE);
  
     // Blink led

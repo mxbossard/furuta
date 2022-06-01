@@ -6,4 +6,7 @@
 
 #define SPEEDS_COUNT_TO_KEEP 10
 
+#define COMMAND_TIMING 5
+#define COMMAND_READ 42
+
 #endif

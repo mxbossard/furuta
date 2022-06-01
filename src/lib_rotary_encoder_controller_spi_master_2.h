@@ -27,9 +27,20 @@ void spiMasterSetup() {
     master.begin(SPI_CLK, SPI_MISO, SPI_MOSI, SPI_CS);
 }
 
-void spiMasterProcess(uint8_t* data) {
+uint8_t timingMarker = 0;
+bool spiMasterProcess(uint8_t* data, uint8_t command) {
+    spi_master_tx_buf[1] = 5; // length
+    spi_master_tx_buf[2] = timingMarker; // marker
+    spi_master_tx_buf[3] = 0; // extraHeader
+    spi_master_tx_buf[4] = command; // command
+    markCrc8(spi_master_tx_buf);
+
+    if (command == COMMAND_TIMING) {
+        timingMarker ++;
+    }
+
     // start master transaction
-    master.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE2));
+    master.beginTransaction(SPISettings(SPI_FREQUENCY, MSBFIRST, SPI_MODE2));
     digitalWrite(VSPI_SS, LOW);
     master.transferBytes(spi_master_tx_buf, data, BUFFER_SIZE);
     // Or you can transfer like this
@@ -39,11 +50,19 @@ void spiMasterProcess(uint8_t* data) {
     master.endTransaction();
 
     // Check CRC8
-    uint8_t calculated = crc8(&data[1], SPI_WORD_SIZE - 1); //45
-    if (data[0] != calculated) {
-        Serial.printf("CRC8 NOT VALID !!! Received CRC8: %d ; Calculated CRC8: %d\n", data[0], calculated);
+    bool validCrc = checkCrc8(data);
+
+    // Check marker
+    bool validMarker = true;
+    if (command == COMMAND_READ) {
+        uint8_t receivedMarker = data[2];
+        validMarker = receivedMarker == timingMarker;
+        if (!validMarker) {
+            Serial.printf("MARKER NOT VALID !!! Expected: %d but received: %d \n", timingMarker, receivedMarker);
+        }
     }
     
+    return validCrc && validMarker;
 }
 
 #endif
