@@ -4,6 +4,9 @@
 #include <Arduino.h>
 #include <SPI.h>
 
+#include <lib_utils.h>
+#include <lib_datagram.h>
+
 static constexpr uint8_t VSPI_SS {5};  // default: GPIO 5
 SPIClass master(VSPI);
 
@@ -27,42 +30,56 @@ void spiMasterSetup() {
     master.begin(SPI_CLK, SPI_MISO, SPI_MOSI, SPI_CS);
 }
 
-uint8_t timingMarker = 0;
-bool spiMasterProcess(uint8_t* data, uint8_t command) {
-    spi_master_tx_buf[1] = 5; // length
-    spi_master_tx_buf[2] = timingMarker; // marker
-    spi_master_tx_buf[3] = 0; // extraHeader
-    spi_master_tx_buf[4] = command; // command
-    markCrc8(spi_master_tx_buf);
-
-    if (command == COMMAND_TIMING) {
-        timingMarker ++;
-    }
-
+void sendSpiTransaction(uint8_t* txBuffer, uint8_t* rxBuffer, size_t length) {
     // start master transaction
     master.beginTransaction(SPISettings(SPI_FREQUENCY, MSBFIRST, SPI_MODE2));
     digitalWrite(VSPI_SS, LOW);
-    master.transferBytes(spi_master_tx_buf, data, BUFFER_SIZE);
-    // Or you can transfer like this
-    // for (size_t i = 0; i < BUFFER_SIZE; ++i)
-    //     spi_master_rx_buf[i] = master.transfer(spi_master_tx_buf[i]);
+    master.transferBytes(txBuffer, rxBuffer, length);
     digitalWrite(VSPI_SS, HIGH);
     master.endTransaction();
+}
+
+const size_t commandLength = 5;
+uint8_t timingMarker = 0;
+
+bool sendSpiTimingCommand() {
+    timingMarker ++;
+
+    buildCommandPayload(spi_master_tx_buf, timingMarker, COMMAND_TIMING);
+    
+    // MBD: Transfer 10 extra byte because it seems the last byte is not trasnfered !!!
+    sendSpiTransaction(spi_master_tx_buf, spi_master_rx_buf, commandLength + 10);
+
+    return false;
+}
+
+bool sendSpiReadCommand() {
+    buildCommandPayload(spi_master_tx_buf, timingMarker, COMMAND_READ);
+    
+    sendSpiTransaction(spi_master_tx_buf, spi_master_rx_buf, BUFFER_SIZE);
 
     // Check CRC8
-    bool validCrc = checkCrc8(data);
-
+    bool validCrc = checkDataCrc8(spi_master_rx_buf);
     // Check marker
-    bool validMarker = true;
-    if (command == COMMAND_READ) {
-        uint8_t receivedMarker = data[2];
-        validMarker = receivedMarker == timingMarker;
-        if (!validMarker) {
-            Serial.printf("MARKER NOT VALID !!! Expected: %d but received: %d \n", timingMarker, receivedMarker);
-        }
-    }
-    
+    bool validMarker = checkMarker(spi_master_rx_buf, timingMarker);
+
     return validCrc && validMarker;
+}
+
+uint8_t* spiMasterProcess() {
+    sendSpiTimingCommand();
+
+    delay(2);
+
+    int8_t retries = 0;
+    while(!sendSpiReadCommand() && retries < 5) {
+        delay(2);
+        retries ++;
+        Serial.printf("Retrying sendSpiReadCommand() #%d ...\n", retries);
+    };
+    printDataPayload(spi_master_rx_buf, SPEEDS_COUNT_TO_KEEP);
+
+    return spi_master_rx_buf;
 }
 
 #endif

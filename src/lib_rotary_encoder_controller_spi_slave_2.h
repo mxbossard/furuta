@@ -3,7 +3,6 @@
 
 #include <lib_rotary_encoder_controller.h>
 
-
 #define SOC_SPI_MAXIMUM_BUFFER_SIZE 128
 #define SPI_DMA_DISABLED 1
 #include <ESP32SPISlave.h>
@@ -37,6 +36,7 @@ void spiSlaveProcess() {
     if (slave.remained() == 0) {
         // if there is no transaction in queue, add a transaction
         slave.queue(spi_slave_rx_buf, spi_slave_tx_buf, BUFFER_SIZE);
+        printDataPayload(spi_slave_tx_buf, SPEEDS_COUNT_TO_KEEP);
 
         // Blink led
         counter ++;
@@ -49,8 +49,12 @@ void spiSlaveProcess() {
 
     while (slave.available()) {
         slave.pop();
+        
+        int64_t startTime = esp_timer_get_time();
+        printCommandPayload(spi_slave_rx_buf);
 
-        if (checkCrc8(spi_slave_rx_buf)) {
+        bool validCrc = checkCommandCrc8(spi_slave_rx_buf);
+        if (validCrc) {
             uint8_t length = spi_slave_rx_buf[1];
             uint8_t marker = spi_slave_rx_buf[2];
             uint8_t extraHeader = spi_slave_rx_buf[3];
@@ -58,18 +62,19 @@ void spiSlaveProcess() {
 
             if (command == COMMAND_TIMING) {
                 // Master asked for a Timing
-                buildDatagram(spi_slave_tx_buf, marker);
-                decodeDatagram(spi_slave_tx_buf, length);
+                size_t pos = buildDatagram(spi_slave_tx_buf, marker);
+
+                // Add elapsed time in payload
+                int64_t endTime = esp_timer_get_time();
+                int64_t buildTime = (endTime - startTime) / 10;
+                uint16_t shortenTime = int64toInt16(buildTime);
+                spi_slave_tx_buf[pos] = shortenTime >> 8;
+                spi_slave_tx_buf[pos+1] = shortenTime;
+
             } else if (command == COMMAND_READ) {
                 // Master asked for a READ
             }
         }
-
-        // show received data
-        // for (size_t i = 0; i < BUFFER_SIZE; ++i) {
-        //     printf("%d ", spi_slave_rx_buf[i]);
-        // }
-        // printf("\n");
 
     }
 }

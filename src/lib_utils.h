@@ -149,21 +149,21 @@ uint8_t crc8(uint8_t *p, size_t len) {
     return crc & 0xFF;
 }
 
-void markCrc8(uint8_t *data) {
-    uint8_t length = data[1];
-    uint8_t crc = crc8(data, length);
+void markCrc8(uint8_t *data, size_t length) {
+    uint8_t crc = crc8(&data[1], length - 1);
     data[0] = crc;
 }
 
-bool checkCrc8(uint8_t *data) {
+bool checkCrc8(uint8_t *data, size_t length) {
     // CRC8 at first position
     uint8_t received = data[0];
-    uint8_t length = data[1];
+    // Serial.printf("Validating CRC8 with length: %d ...\n", length);
     uint8_t calculated = crc8(&data[1], length - 1);
     if (received != calculated) {
-        Serial.printf("CRC8 NOT VALID !!! Received: %d but calculated: %d\n", received, calculated);
+        Serial.printf("CRC8 NOT VALID !!! Received: %d but calculated: %d for length: %d\n", received, calculated, length);
         return false;
     }
+    //Serial.printf("CRC8 IS VALID\n");
     return true;
 }
 

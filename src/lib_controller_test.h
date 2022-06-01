@@ -78,7 +78,7 @@ void testPendulum(uint16_t amplitude1, uint16_t amplitude2, uint16_t bounces, ui
     indexSimul(simul2, periodInUs);
     for (; bounces > 0 ; bounces --) {
         moveBothSimulators(true, amplitude1, false, amplitude2, periodInUs);
-        char message[60];
+        // char message[60];
         // sprintf(message, "Pendulum rising bounce %d", bounces);
         // assertPosition(message, simul1, amplitude1);
         // assertPosition(message, simul2, amplitude2);
