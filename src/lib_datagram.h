@@ -23,7 +23,18 @@ bool checkDataCrc8(uint8_t* buffer) {
     return checkCrc8(buffer, DATA_PAYLOAD_SIZE);
 }
 
+void printFullPayload(uint8_t* buffer, size_t size) {
+    #ifdef LOG_INFO
+    Serial.printf("Full payload: [%02x", buffer[0]);
+    for (int k = 1; k < size; k++) {
+        Serial.printf(" %02x", buffer[k]);
+    }
+     Serial.println("]");
+     #endif
+}
+
 void printCommandPayload(uint8_t* buffer) {
+    #ifdef LOG_INFO
     Serial.printf("Decoded command payload: ");
     uint8_t crc8 = buffer[0];
     uint8_t length = buffer[1];
@@ -32,6 +43,7 @@ void printCommandPayload(uint8_t* buffer) {
     uint8_t command = buffer[4];
 
     Serial.printf("CRC8: %d ; Length: %d ; Marker: %d ; Header: %d ; Command: %d\n", crc8, length, marker, extraHeader, command);
+    #endif
 }
 
 void buildCommandPayload(uint8_t* buffer, uint8_t marker, uint8_t command) {
@@ -44,7 +56,36 @@ void buildCommandPayload(uint8_t* buffer, uint8_t marker, uint8_t command) {
     //printCommandPayload(buffer);
 }
 
+void buildRedundantCommandPayload(uint8_t* buffer, uint8_t marker, uint8_t command, uint8_t redundancy) {
+    // Write multiple Commande packets in the payload
+    for (uint8_t k = 0; k < redundancy; k++) {
+        buildCommandPayload(&buffer[k * COMMAND_PAYLOAD_SIZE], marker, command);
+    }
+}
+
+uint8_t getRedundantCommandPayload(uint8_t* buffer, uint8_t redundancy) {
+    // Get commant byte of first redundant command with a valid CRC.
+    for (uint8_t k = 0; k < redundancy; k++) {
+        uint8_t* commandBuffer = &buffer[k * COMMAND_PAYLOAD_SIZE];
+        //Serial.printf("Check renduant command #%d : ", k);
+        if (checkCommandCrc8(commandBuffer)) {
+            #ifdef LOG_DEBUG
+            Serial.printf("Good CRC8: ");
+            printCommandPayload(commandBuffer);
+            #endif
+            return commandBuffer[4];
+        } else {
+            #ifdef LOG_DEBUG
+            Serial.printf("Bad CRC8 : ");
+            printCommandPayload(commandBuffer);
+            #endif
+        }
+    }
+    return false;
+}
+
 void printDataPayload(uint8_t* buffer, size_t speedsCount) {
+    #ifdef LOG_INFO
     Serial.printf("Decoded data payload: ");
     uint8_t crc8 = buffer[0];
     uint8_t length = buffer[1];
@@ -70,6 +111,7 @@ void printDataPayload(uint8_t* buffer, size_t speedsCount) {
     uint32_t buildTimeInUs = ((uint32_t)buildTimeIn10us) * 10;
 
     Serial.printf("CRC8: %d ; Length: %d ; Marker: %d ; Header: %d ; Position1: %d ; Speeds1: [%d, %d, %d, %d, %d, ...]; Position2: %d ; Speeds2: [%d, %d, %d, %d, %d, ...] ; buildTime: %dµs\n", crc8, length, marker, extraHeader, position1, speed10, speed11, speed12, speed13, speed14, position2, speed20, speed21, speed22, speed23, speed24, buildTimeInUs);
+    #endif
 }
 
 void buildDataPayload(uint8_t* buffer) {
@@ -78,9 +120,11 @@ void buildDataPayload(uint8_t* buffer) {
 
 bool checkMarker(uint8_t* buffer, uint8_t expectedMarker) {
     uint8_t receivedMarker = buffer[2];
-    bool validMarker = receivedMarker == expectedMarker;
+    bool validMarker = receivedMarker > 0 && receivedMarker == expectedMarker;
     if (!validMarker) {
-        Serial.printf("MARKER NOT VALID !!! Expected: %d but received: %d \n", expectedMarker, receivedMarker);
+        #ifdef LOG_WARN
+        Serial.printf("MARKER NOT VALID !!! Expected: %d but got: %d \n", expectedMarker, receivedMarker);
+        #endif
         return false;
     }
     //Serial.printf("MARKER IS VALID\n");

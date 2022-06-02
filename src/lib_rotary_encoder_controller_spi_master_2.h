@@ -19,8 +19,8 @@ void set_buffer(uint8_t* buff, const size_t size) {
 }
 
 void spiMasterSetup() {
-    set_buffer(spi_master_tx_buf, SPI_WORD_SIZE);
-    set_buffer(spi_master_rx_buf, SPI_WORD_SIZE);
+    set_buffer(spi_master_tx_buf, BUFFER_SIZE);
+    set_buffer(spi_master_rx_buf, BUFFER_SIZE);
 
     // SPI Master
     // VSPI = CS: 5, CLK: 18, MOSI: 23, MISO: 19
@@ -44,17 +44,23 @@ uint8_t timingMarker = 0;
 
 bool sendSpiTimingCommand() {
     timingMarker ++;
+    if (timingMarker == 0) {
+        // Marker should not equal 0.
+        timingMarker ++;
+    }
 
-    buildCommandPayload(spi_master_tx_buf, timingMarker, COMMAND_TIMING);
+    buildRedundantCommandPayload(spi_master_tx_buf, timingMarker, COMMAND_TIMING, SPI_COMMAND_REDUNDANCY);
+    //printFullPayload(spi_master_tx_buf, BUFFER_SIZE);
     
-    // MBD: Transfer 10 extra byte because it seems the last byte is not trasnfered !!!
-    sendSpiTransaction(spi_master_tx_buf, spi_master_rx_buf, commandLength + 10);
+    // MBD: Transfer 1 extra byte because it seems the last byte is not trasnfered !!!
+    sendSpiTransaction(spi_master_tx_buf, spi_master_rx_buf, commandLength * SPI_COMMAND_REDUNDANCY + 1);
 
     return false;
 }
 
 bool sendSpiReadCommand() {
-    buildCommandPayload(spi_master_tx_buf, timingMarker, COMMAND_READ);
+    buildRedundantCommandPayload(spi_master_tx_buf, timingMarker, COMMAND_READ, SPI_COMMAND_REDUNDANCY);
+    //printFullPayload(spi_master_tx_buf, BUFFER_SIZE);
     
     sendSpiTransaction(spi_master_tx_buf, spi_master_rx_buf, BUFFER_SIZE);
 
@@ -67,17 +73,27 @@ bool sendSpiReadCommand() {
 }
 
 uint8_t* spiMasterProcess() {
+    delay(10);
+
     sendSpiTimingCommand();
 
-    delay(2);
+    delay(100);
 
     int8_t retries = 0;
-    while(!sendSpiReadCommand() && retries < 5) {
-        delay(2);
+    int16_t waitTime = 2;
+    bool valid;
+    while(valid = sendSpiReadCommand(), !valid && retries < SPI_READ_MAX_RETRY) {
+        delay(waitTime);
         retries ++;
-        Serial.printf("Retrying sendSpiReadCommand() #%d ...\n", retries);
+        waitTime = pow(2, retries);
+        Serial.printf("Retrying sendSpiReadCommand() #%d after %dms... \n", retries, waitTime);
+        //printDataPayload(spi_master_rx_buf, SPEEDS_COUNT_TO_KEEP);
     };
-    printDataPayload(spi_master_rx_buf, SPEEDS_COUNT_TO_KEEP);
+    
+    if (!valid) {
+        blinkLed();
+    }
+    //printDataPayload(spi_master_rx_buf, SPEEDS_COUNT_TO_KEEP);
 
     return spi_master_rx_buf;
 }

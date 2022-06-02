@@ -111,6 +111,7 @@ static const uint8_t crc8_table[] = {
     0xfa, 0xfd, 0xf4, 0xf3
 };
 
+/*
 static const uint8_t crc8_cdma2000_table[] = {
     0x00, 0x9b, 0xad, 0x36, 0xc1, 0x5a, 0x6c, 0xf7, 0x19, 0x82, 0xb4, 0x2f, 
     0xd8, 0x43, 0x75, 0xee, 0x32, 0xa9, 0x9f, 0x04, 0xf3, 0x68, 0x5e, 0xc5, 
@@ -135,6 +136,7 @@ static const uint8_t crc8_cdma2000_table[] = {
     0x95, 0x0e, 0x38, 0xa3, 0x54, 0xcf, 0xf9, 0x62, 0x8c, 0x17, 0x21, 0xba, 
     0x4d, 0xd6, 0xe0, 0x7b
 };
+*/
 
 // FIXME: This CRC8 return 0 for a buffer full of 0 so it is valid for an empty transmission which is bad.
 uint8_t crc8(uint8_t *p, size_t len) {
@@ -143,7 +145,7 @@ uint8_t crc8(uint8_t *p, size_t len) {
 
     while (len --) {
             i = (crc ^ *p++) & 0xFF;
-            crc = (crc8_cdma2000_table[i] ^ (crc << 8)) & 0xFF;
+            crc = (crc8_table[i] ^ (crc << 8)) & 0xFF;
     }
 
     return crc & 0xFF;
@@ -160,11 +162,20 @@ bool checkCrc8(uint8_t *data, size_t length) {
     // Serial.printf("Validating CRC8 with length: %d ...\n", length);
     uint8_t calculated = crc8(&data[1], length - 1);
     if (received != calculated) {
-        Serial.printf("CRC8 NOT VALID !!! Received: %d but calculated: %d for length: %d\n", received, calculated, length);
+        #ifdef LOG_WARN
+        Serial.printf("CRC8 NOT VALID !!! expected: %d but got: %d for length: %d\n", received, calculated, length);
+        #endif
         return false;
     }
     //Serial.printf("CRC8 IS VALID\n");
     return true;
+}
+
+bool blinker = false;
+void blinkLed() {
+    // Blink led
+    blinker = !blinker;
+    digitalWrite(LED_PIN, blinker);
 }
 
 #endif

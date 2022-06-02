@@ -30,7 +30,6 @@ void setup() {
     pinMode(LED_PIN, OUTPUT);
 }
 
-int counter = 0;
 uint8_t* messageBuffer = (uint8_t*) malloc(sizeof(uint8_t) * SPI_WORD_SIZE);
 
 void loop() {
@@ -99,10 +98,6 @@ void loop() {
     testPendulum(2000, 500, 12, periodInUs);
 
     data = spiMasterProcess();
-
-    // Blink led
-    counter ++;
-    digitalWrite(LED_PIN, counter % 2);
 
     delay(2000);
 }

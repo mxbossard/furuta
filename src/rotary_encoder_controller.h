@@ -20,7 +20,7 @@
 #include <lib_rotary_encoder_controller_spi_slave_2.h>
 
 void setup() {
-    //Serial.begin(115200);
+    Serial.begin(115200);
 
     controllerSetup();
     spiSlaveSetup();

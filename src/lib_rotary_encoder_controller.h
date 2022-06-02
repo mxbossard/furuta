@@ -216,7 +216,7 @@ size_t buildDatagram(uint8_t* buffer, uint8_t marker) {
     // Marker
     buffer[p] = marker;
     p += 1;
-    
+
     // Extra header
     buffer[p] = datagramCounter & 0x0F; // 4 bits counter
     p += 1;
@@ -261,8 +261,7 @@ size_t buildDatagram(uint8_t* buffer, uint8_t marker) {
 
     int64_t endCrcBuild = esp_timer_get_time();
 
-    
-    // Debug
+    #ifdef LOG_DEBUG
     uint32_t transactionTime = (uint32_t) (endTransaction - now);
     uint32_t speedsCalculationTime = (uint32_t) (endSpeedsCalculation - endTransaction);
     uint32_t datagramBuildTime = (uint32_t) (endDatagramBuild - endSpeedsCalculation);
@@ -279,6 +278,7 @@ size_t buildDatagram(uint8_t* buffer, uint8_t marker) {
         Serial.printf("%02X ", buffer[k]);
     }
     Serial.println();
+    #endif
 
     datagramCounter ++;
 
