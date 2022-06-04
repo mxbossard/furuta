@@ -15,6 +15,9 @@
 
 #define LED_PIN 22
 
+#define LOG_WARN
+#define LOG_INFO
+
 #include <rotary_encoder_config.h>
 #include <lib_rotary_encoder_simulator.h>
 #include <lib_rotary_encoder_controller_spi_master_2.h>
@@ -99,5 +102,5 @@ void loop() {
 
     data = spiMasterProcess();
 
-    delay(2000);
+    //delay(2000);
 }

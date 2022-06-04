@@ -31,6 +31,8 @@ void spiMasterSetup() {
 }
 
 void sendSpiTransaction(uint8_t* txBuffer, uint8_t* rxBuffer, size_t length) {
+    // force BUFFER_SIZE length
+    length = BUFFER_SIZE;
     // start master transaction
     master.beginTransaction(SPISettings(SPI_FREQUENCY, MSBFIRST, SPI_MODE2));
     digitalWrite(VSPI_SS, LOW);
@@ -63,21 +65,18 @@ bool sendSpiReadCommand() {
     //printFullPayload(spi_master_tx_buf, BUFFER_SIZE);
     
     sendSpiTransaction(spi_master_tx_buf, spi_master_rx_buf, BUFFER_SIZE);
+    //printFullPayload(spi_master_rx_buf, BUFFER_SIZE);
 
-    // Check CRC8
-    bool validCrc = checkDataCrc8(spi_master_rx_buf);
-    // Check marker
-    bool validMarker = checkMarker(spi_master_rx_buf, timingMarker);
-
-    return validCrc && validMarker;
+    // Check CRC and marker
+    return isDataPayloadCrcValid(spi_master_rx_buf) && isMarkerValid(spi_master_rx_buf, timingMarker);
 }
 
 uint8_t* spiMasterProcess() {
-    delay(10);
+    //delay(10);
 
     sendSpiTimingCommand();
 
-    delay(100);
+    delay(1);
 
     int8_t retries = 0;
     int16_t waitTime = 2;
@@ -90,10 +89,11 @@ uint8_t* spiMasterProcess() {
         //printDataPayload(spi_master_rx_buf, SPEEDS_COUNT_TO_KEEP);
     };
     
-    if (!valid) {
+    if (valid) {
+        printDataPayload(spi_master_rx_buf, SPEEDS_COUNT_TO_KEEP);
+    } else {
         blinkLed();
     }
-    //printDataPayload(spi_master_rx_buf, SPEEDS_COUNT_TO_KEEP);
 
     return spi_master_rx_buf;
 }

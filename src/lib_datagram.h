@@ -4,23 +4,23 @@
 #include <rotary_encoder_config.h>
 #include <lib_utils.h>
 
-static const size_t COMMAND_PAYLOAD_SIZE = 5;
+static const size_t COMMAND_PAYLOAD_SIZE = 4;
 static const size_t DATA_PAYLOAD_SIZE = 48; 
 
-void markCommandCrc8(uint8_t* buffer) {
-    markCrc8(buffer, COMMAND_PAYLOAD_SIZE);
+void crcCommandPayload(uint8_t* buffer) {
+    markCrc16(buffer, COMMAND_PAYLOAD_SIZE);
 }
 
-void markDataCrc8(uint8_t* buffer) {
-    markCrc8(buffer, DATA_PAYLOAD_SIZE);
+void crcDataPayload(uint8_t* buffer) {
+    markCrc16(buffer, DATA_PAYLOAD_SIZE);
 }
 
-bool checkCommandCrc8(uint8_t* buffer) {
-    return checkCrc8(buffer, COMMAND_PAYLOAD_SIZE);
+bool isCommandPayloadCrcValid(uint8_t* buffer) {
+    return checkCrc16(buffer, COMMAND_PAYLOAD_SIZE);
 }
 
-bool checkDataCrc8(uint8_t* buffer) {
-    return checkCrc8(buffer, DATA_PAYLOAD_SIZE);
+bool isDataPayloadCrcValid(uint8_t* buffer) {
+    return checkCrc16(buffer, DATA_PAYLOAD_SIZE);
 }
 
 void printFullPayload(uint8_t* buffer, size_t size) {
@@ -36,24 +36,35 @@ void printFullPayload(uint8_t* buffer, size_t size) {
 void printCommandPayload(uint8_t* buffer) {
     #ifdef LOG_INFO
     Serial.printf("Decoded command payload: ");
-    uint8_t crc8 = buffer[0];
-    uint8_t length = buffer[1];
+    uint16_t crc16 = buffer[0] << 8;
+    crc16 += buffer[1];
     uint8_t marker = buffer[2];
-    uint8_t extraHeader = buffer[3];
-    uint8_t command = buffer[4];
+    uint8_t command = buffer[3];
 
-    Serial.printf("CRC8: %d ; Length: %d ; Marker: %d ; Header: %d ; Command: %d\n", crc8, length, marker, extraHeader, command);
+    Serial.printf("CRC16: %d ; Marker: %d ; Command: %d\n", crc16, marker, command);
     #endif
 }
 
 void buildCommandPayload(uint8_t* buffer, uint8_t marker, uint8_t command) {
-    buffer[1] = COMMAND_PAYLOAD_SIZE; // length
     buffer[2] = marker; // marker
-    buffer[3] = 0; // extraHeader
-    buffer[4] = command; // command
-    markCommandCrc8(buffer);
-
+    buffer[3] = command; // command
+    crcCommandPayload(buffer);
     //printCommandPayload(buffer);
+}
+
+uint16_t getCrc16(uint8_t* payload) {
+    uint16_t crc = (uint16_t) payload[0];
+    crc = crc << 8;
+    crc += (uint16_t) payload[1];
+    return crc;
+}
+
+uint8_t getMarker(uint8_t* payload) {
+    return payload[2];
+}
+
+uint8_t getCommand(uint8_t* payload) {
+    return payload[3];
 }
 
 void buildRedundantCommandPayload(uint8_t* buffer, uint8_t marker, uint8_t command, uint8_t redundancy) {
@@ -63,17 +74,22 @@ void buildRedundantCommandPayload(uint8_t* buffer, uint8_t marker, uint8_t comma
     }
 }
 
-uint8_t getRedundantCommandPayload(uint8_t* buffer, uint8_t redundancy) {
-    // Get commant byte of first redundant command with a valid CRC.
+int cmpfunc(const void* a, const void* b) {
+    return (*(int*)a - *(int*)b);
+}
+
+uint8_t* getRedundantCommandPayload(uint8_t* buffer, uint8_t redundancy) {
+    // Find first redundant command payload with a valid CRC.
     for (uint8_t k = 0; k < redundancy; k++) {
         uint8_t* commandBuffer = &buffer[k * COMMAND_PAYLOAD_SIZE];
         //Serial.printf("Check renduant command #%d : ", k);
-        if (checkCommandCrc8(commandBuffer)) {
+        
+        if (isCommandPayloadCrcValid(commandBuffer)) {
             #ifdef LOG_DEBUG
             Serial.printf("Good CRC8: ");
             printCommandPayload(commandBuffer);
             #endif
-            return commandBuffer[4];
+            return commandBuffer;
         } else {
             #ifdef LOG_DEBUG
             Serial.printf("Bad CRC8 : ");
@@ -81,14 +97,62 @@ uint8_t getRedundantCommandPayload(uint8_t* buffer, uint8_t redundancy) {
             #endif
         }
     }
-    return false;
+    
+    return NULL;
+}
+
+uint8_t* commandFounds = (uint8_t*) malloc(sizeof(uint8_t) * 16);
+uint8_t getRedundantCommandPayload2(uint8_t* buffer, uint8_t redundancy) {
+    uint8_t commandFoundCount = 0;
+    initArray8(commandFounds, redundancy);
+    // Get commant byte of first redundant command with a valid CRC.
+    for (uint8_t k = 0; k < redundancy; k++) {
+        uint8_t* commandBuffer = &buffer[k * COMMAND_PAYLOAD_SIZE];
+        //Serial.printf("Check renduant command #%d : ", k);
+        
+        if (isCommandPayloadCrcValid(commandBuffer)) {
+            #ifdef LOG_DEBUG
+            Serial.printf("Good CRC8: ");
+            printCommandPayload(commandBuffer);
+            #endif
+            commandFounds[k] = getCommand(commandBuffer);
+            commandFoundCount ++;
+        } else {
+            #ifdef LOG_DEBUG
+            Serial.printf("Bad CRC8 : ");
+            printCommandPayload(commandBuffer);
+            #endif
+        }
+    }
+    
+    uint8_t result = 0;
+    if (commandFoundCount > 0) {
+        qsort(commandFounds, commandFoundCount, sizeof(uint8_t), cmpfunc);
+        result = commandFounds[0];
+        uint8_t maxCount = 1, currCount = 1;
+        for (uint8_t k = 1 ; k < commandFoundCount ; k++) {
+            if (commandFounds[k] == commandFounds[k - 1]) {
+                currCount ++;
+            } else {
+                currCount = 1;
+            }
+
+            if (currCount > maxCount) {
+                maxCount = currCount;
+                result = commandFounds[k]; // If multiple command are equifrequent take the last one.
+            }
+        }
+    }
+
+    return result;
 }
 
 void printDataPayload(uint8_t* buffer, size_t speedsCount) {
     #ifdef LOG_INFO
     Serial.printf("Decoded data payload: ");
-    uint8_t crc8 = buffer[0];
-    uint8_t length = buffer[1];
+    uint16_t crc16 = (uint16_t) buffer[0];
+    crc16 = crc16 << 8;
+    crc16 += (uint16_t) buffer[1];
     uint8_t marker = buffer[2];
     uint8_t extraHeader = buffer[3];
     uint16_t position1 = (buffer[4] << 8) + buffer[5];
@@ -110,15 +174,94 @@ void printDataPayload(uint8_t* buffer, size_t speedsCount) {
     uint16_t buildTimeIn10us = (buffer[offset] << 8) + buffer[offset + 1];
     uint32_t buildTimeInUs = ((uint32_t)buildTimeIn10us) * 10;
 
-    Serial.printf("CRC8: %d ; Length: %d ; Marker: %d ; Header: %d ; Position1: %d ; Speeds1: [%d, %d, %d, %d, %d, ...]; Position2: %d ; Speeds2: [%d, %d, %d, %d, %d, ...] ; buildTime: %dµs\n", crc8, length, marker, extraHeader, position1, speed10, speed11, speed12, speed13, speed14, position2, speed20, speed21, speed22, speed23, speed24, buildTimeInUs);
+    Serial.printf("CRC16: %d ; Marker: %d ; Header: %d ; Position1: %d ; Speeds1: [%d, %d, %d, %d, %d, ...]; Position2: %d ; Speeds2: [%d, %d, %d, %d, %d, ...] ; buildTime: %dµs\n", crc16, marker, extraHeader, position1, speed10, speed11, speed12, speed13, speed14, position2, speed20, speed21, speed22, speed23, speed24, buildTimeInUs);
     #endif
 }
 
-void buildDataPayload(uint8_t* buffer) {
-    // TODO
+uint8_t datagramCounter = 0;
+size_t buildDataPayload(uint8_t* buffer, uint8_t marker, int64_t now, uint16_t position1, int64_t* speedsBuffer1, size_t speeds1Count, uint16_t position2, int64_t* speedsBuffer2, size_t speeds2Count) {
+    #ifdef LOG_DEBUG
+    int64_t startDatagramBuild = esp_timer_get_time();
+    #endif
+
+    // Sensor Datagram :
+    // CRC16 on 2 bytes
+    // Marker on 1 byte
+    // Extra header on 1 byte (Parity, Speed counts, redondancy, ...)
+    // sensor position on 2 bytes
+    // Each speed on 2 bytes
+
+    size_t p = 0;
+
+    // Room for CRC16
+    p += 2;
+
+    // Marker
+    buffer[p] = marker;
+    p += 1;
+
+    // Extra header
+    buffer[p] = datagramCounter & 0x0F; // 4 bits counter
+    p += 1;
+
+    // Position 1
+    buffer[p] = position1 >> 8;
+    buffer[p+1] = position1;
+    p += 2;
+
+    // Speeds 1
+    for (size_t k = 0; k < speeds1Count; k++) {
+        // Limit speed to int16_t format
+        int16_t limitedSpeed = int64toInt16(speedsBuffer1[k]);
+        buffer[p] = limitedSpeed >> 8;
+        buffer[p+1] = limitedSpeed;
+        //Serial.printf("int32: 0x%08X (%d) ; int16: %d ; int16: 0x%02X%02X\n", speeds[k], speeds[k], speed, buffer[p], buffer[p+1]);
+        p += 2;
+    }
+
+    // Position 2
+    buffer[p] = position2 >> 8;
+    buffer[p+1] = position2;
+    p += 2;
+
+    // Speeds 2
+    for (size_t k = 0; k < speeds2Count; k++) {
+        // Limit speed to int16_t format
+        int16_t limitedSpeed = int64toInt16(speedsBuffer2[k]);
+        buffer[p] = limitedSpeed >> 8;
+        buffer[p+1] = limitedSpeed;
+        //Serial.printf("int32: 0x%08X (%d) ; int16: %d ; int16: 0x%02X%02X\n", speeds[k], speeds[k], speed, buffer[p], buffer[p+1]);
+        p += 2;
+    }
+
+    #ifdef LOG_DEBUG
+    int64_t endDatagramBuild = esp_timer_get_time();
+    #endif
+
+    // CRC16 at first position
+    crcDataPayload(buffer);
+
+    #ifdef LOG_DEBUG
+    int64_t endCrcBuild = esp_timer_get_time();
+    #endif
+
+    #ifdef LOG_DEBUG
+    uint32_t datagramBuildTime = (uint32_t) (endDatagramBuild - startDatagramBuild);
+    uint32_t crcBuildTime = (uint32_t) (endCrcBuild - endDatagramBuild);
+
+    Serial.printf("[Timings] datagram: %dµs ; crc: %dµs\n", datagramBuildTime, crcBuildTime);
+
+    printSensors(now);
+    printTimings(timingsBuffer1, timings1.size);
+    printSpeeds(speedsBuffer1, timings1.size);
+    #endif
+
+    datagramCounter ++;
+
+    return p;
 }
 
-bool checkMarker(uint8_t* buffer, uint8_t expectedMarker) {
+bool isMarkerValid(uint8_t* buffer, uint8_t expectedMarker) {
     uint8_t receivedMarker = buffer[2];
     bool validMarker = receivedMarker > 0 && receivedMarker == expectedMarker;
     if (!validMarker) {
