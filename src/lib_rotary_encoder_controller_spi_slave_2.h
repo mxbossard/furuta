@@ -74,8 +74,10 @@ void spiSlaveProcess() {
     // if transaction has completed from master,
     // available() returns size of results of transaction,
     // and buffer is automatically updated
-
-    while (slave.available()) {
+    size_t available;
+    size_t avail0, avail1, avail2, avail3, avail4, avail5;
+    size_t remain0, remain1, remain2, remain3, remain4, remain5;
+    while (available = slave.available(), available) {
         // do something with `spi_slave_rx_buf`
 
         //printCommandPayload(spi_slave_rx_buf);
@@ -94,13 +96,34 @@ void spiSlaveProcess() {
             } else if (receivedCommand == COMMAND_READ) {
                 // Master asked for a READ
             }
+
         } else {
             //state = 0;
             //Serial.println("Unable to decode redundant command !");
             blinkLed();
         }
 
+        avail0 = slave.available();
+        remain0 = slave.remained();
+        delayMicroseconds(10);
+        avail1 = slave.available();
+        remain1 = slave.remained();
+        delayMicroseconds(1000);
+        avail2 = slave.available();
+        remain2 = slave.remained();
         slave.pop();
+        avail3 = slave.available();
+        remain3 = slave.remained();
+        delayMicroseconds(10);
+        avail4 = slave.available();
+        remain4 = slave.remained();
+        delayMicroseconds(1000);
+        avail5 = slave.available();
+        remain5 = slave.remained();
+
+        Serial.printf("slave.avalable(): available: %d ; avail0: %d ; avail1: %d ; avail2: %d ; avail3: %d ; avail4: %d ; avail5: %d \n", available, avail0, avail1, avail2, avail3, avail4, avail5);
+        Serial.printf("slave.remained(): remain0: %d ; remain1: %d ; remain2: %d ; remain3: %d ; remain4: %d ; remain5: %d \n", remain0, remain1, remain2, remain3, remain4, remain5);
+        
         //Serial.printf("Remaining: %d\n", slave.remained());
     }
     // Wait some time between available() and remaining(). If not, remaining not refreshed().
