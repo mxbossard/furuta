@@ -77,14 +77,16 @@ uint8_t* spiMasterProcess() {
     delay(1);
 
     int8_t retries = 0;
-    int16_t waitTime = 2;
+    int16_t waitTime = 1;
     bool valid;
     while(valid = sendSpiReadCommand(), !valid && retries < SPI_READ_MAX_RETRY) {
         delay(waitTime);
         retries ++;
-        waitTime = pow(2, retries);
+        //waitTime = pow(2, retries);
+        #ifdef LOG_DEBUG
         Serial.printf("Retrying sendSpiReadCommand() #%d after %dms... \n", retries, waitTime);
         //printDataPayload(spi_master_rx_buf, SPEEDS_COUNT_TO_KEEP);
+        #endif
     };
     
     if (valid) {
