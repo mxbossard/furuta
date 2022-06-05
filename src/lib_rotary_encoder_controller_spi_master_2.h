@@ -31,8 +31,6 @@ void spiMasterSetup() {
 }
 
 void sendSpiTransaction(uint8_t* txBuffer, uint8_t* rxBuffer, size_t length) {
-    // force BUFFER_SIZE length
-    length = BUFFER_SIZE;
     // start master transaction
     master.beginTransaction(SPISettings(SPI_FREQUENCY, MSBFIRST, SPI_MODE2));
     digitalWrite(VSPI_SS, LOW);

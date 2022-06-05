@@ -90,7 +90,9 @@ void spiSlaveProcess() {
 
         } else {
             // No valid payload found
+            #ifdef LOG_WARN
             Serial.printf("No valid payload found !\n");
+            #endif
             blinkLed();
         }
 
