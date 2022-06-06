@@ -74,13 +74,13 @@ uint8_t* spiMasterProcess() {
 
     sendSpiTimingCommand();
 
-    delay(1);
+    delayMicroseconds(100);
 
     int8_t retries = 0;
-    int16_t waitTime = 1;
+    int16_t waitTimeUs = 100;
     bool valid;
     while(valid = sendSpiReadCommand(), !valid && retries < SPI_READ_MAX_RETRY) {
-        delay(waitTime);
+        delayMicroseconds(waitTimeUs);
         retries ++;
         //waitTime = pow(2, retries);
         #ifdef LOG_DEBUG
