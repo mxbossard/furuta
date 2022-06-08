@@ -5,9 +5,9 @@
 #define SPI_CLK 18
 #define SPI_CS   5
 
-#define SIMUL_1_PIN_A 32
-#define SIMUL_1_PIN_B 33
-#define SIMUL_1_PIN_INDEX 25
+#define SIMUL_1_PIN_A 16
+#define SIMUL_1_PIN_B 4
+#define SIMUL_1_PIN_INDEX 0
 
 #define SIMUL_2_PIN_A 27
 #define SIMUL_2_PIN_B 14
@@ -39,6 +39,7 @@ void loop() {
     // delay(2000);
 
     Serial.println("Running simulation ...");
+    int64_t startTime = esp_timer_get_time();
     // testModulo();
 
     // printSimulators();
@@ -46,9 +47,9 @@ void loop() {
 
     uint32_t periodInUs = 1;
 
-    indexSimul(simul1, periodInUs);
+    indexSimul(&simul1, periodInUs);
     // assertCount("Reseting index", sensor1, simul1);
-    indexSimul(simul2, periodInUs);
+    indexSimul(&simul2, periodInUs);
     // assertCount("Reseting index", sensor2, simul2);
     // printSimulators();
     // printSensors();
@@ -100,7 +101,13 @@ void loop() {
 
     testPendulum(2000, 500, 12, periodInUs);
 
+    moveBothSimulators(false, 3, false, 0, periodInUs);
+
     data = spiMasterProcess();
 
+    int64_t endTime = esp_timer_get_time();
+    int32_t duration = (int32_t) (endTime - startTime);
+
+    Serial.printf("Simulation took %d µs.\n\n", duration);
     //delay(2000);
 }
