@@ -18,8 +18,8 @@ AngleSensor sensor1 = {SENSOR_1_PIN_A, SENSOR_1_PIN_B, SENSOR_1_PIN_INDEX, 4000,
 AngleSensor sensor2 = {SENSOR_2_PIN_A, SENSOR_2_PIN_B, SENSOR_2_PIN_INDEX, 1000, 0, 0, "sensor2"};
 
 void IRAM_ATTR moveSensor1A() {
-    bool aLevel = digitalRead(sensor1.pinA);
-    bool bLevel = digitalRead(sensor1.pinB);
+    bool aLevel = digitalRead(SENSOR_1_PIN_A);
+    bool bLevel = digitalRead(SENSOR_1_PIN_B);
 
     int64_t usTiming = esp_timer_get_time();
 
@@ -38,8 +38,8 @@ void IRAM_ATTR moveSensor1A() {
 }
 
 void IRAM_ATTR moveSensor1B() {
-    bool aLevel = digitalRead(sensor1.pinA);
-    bool bLevel = digitalRead(sensor1.pinB);
+    bool aLevel = digitalRead(SENSOR_1_PIN_A);
+    bool bLevel = digitalRead(SENSOR_1_PIN_B);
 
     portENTER_CRITICAL(&mux);
     if (aLevel != bLevel) {
@@ -63,8 +63,8 @@ void IRAM_ATTR resetSensor1() {
 }
 
 void IRAM_ATTR moveSensor2A() {
-    bool aLevel = digitalRead(sensor2.pinA);
-    bool bLevel = digitalRead(sensor2.pinB);
+    bool aLevel = digitalRead(SENSOR_2_PIN_A);
+    bool bLevel = digitalRead(SENSOR_2_PIN_B);
 
     portENTER_CRITICAL(&mux);
     if (aLevel == bLevel) {
@@ -81,8 +81,8 @@ void IRAM_ATTR moveSensor2A() {
 }
 
 void IRAM_ATTR moveSensor2B() {
-    bool aLevel = digitalRead(sensor2.pinA);
-    bool bLevel = digitalRead(sensor2.pinB);
+    bool aLevel = digitalRead(SENSOR_2_PIN_A);
+    bool bLevel = digitalRead(SENSOR_2_PIN_B);
 
     portENTER_CRITICAL(&mux);
     if (aLevel != bLevel) {
@@ -140,9 +140,9 @@ int32_t timingsMessage(char* buf, int64_t* timings, size_t size) {
     return n;
 }
 
-const char* sensorMessage(AngleSensor sensor, int64_t* speeds, size_t speedSize) {
+const char* sensorMessage(AngleSensor* sensor, int64_t* speeds, size_t speedSize) {
     char* buf = (char*) malloc(sizeof(char) * 128);
-    int32_t n = sprintf(buf, "[%s] position: %d ", sensor.name, sensor.position);
+    int32_t n = sprintf(buf, "[%s] position: %d ", sensor->name, sensor->position);
     n += speedsMessage(&buf[n], speeds, speedSize);
     return buf;
 }
@@ -186,8 +186,8 @@ size_t buildDatagram(uint8_t* buffer, uint8_t marker) {
     getDataArrayCircularBuffer(timings1, timingsBuffer1, timings1.size);
     getDataArrayCircularBuffer(timings2, timingsBuffer2, timings2.size);
 
-    int16_t position1 = sensor1.position;
-    int16_t position2 = sensor2.position;
+    uint16_t position1 = sensor1.position;
+    uint16_t position2 = sensor2.position;
 
     portEXIT_CRITICAL(&mux);
 
@@ -223,9 +223,9 @@ void printSensorInputs() {
     Serial.printf(" ; [%s] pinA(%d): %d pinB(%d): %d pinIndex(%d): %d\n", sensor2.name, sensor2.pinA, digitalRead(sensor2.pinA), sensor2.pinB, digitalRead(sensor2.pinB), sensor2.pinIndex, digitalRead(sensor2.pinIndex));
 }
 
-const char* positionMessage(AngleSensor sensor) {
+const char* positionMessage(AngleSensor* sensor) {
     char* buf = (char*) malloc(sizeof(char) * 16);
-    sprintf(buf, "%d", sensor.position);
+    sprintf(buf, "%d", sensor->position);
     return buf;
 }
 

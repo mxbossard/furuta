@@ -67,6 +67,16 @@ uint8_t getCommand(uint8_t* payload) {
     return payload[3];
 }
 
+uint16_t getPosition1(uint8_t* payload) {
+    uint16_t position1 = (((uint16_t)payload[4]) << 8) + payload[5];
+    return position1;
+}
+
+uint16_t getPosition2(uint8_t* payload) {
+    uint16_t position2 = (((uint16_t)payload[6]) << 8) + payload[7];
+    return position2;
+}
+
 void buildRedundantCommandPayload(uint8_t* buffer, uint8_t marker, uint8_t command, uint8_t redundancy) {
     // Write multiple Commande packets in the payload
     for (uint8_t k = 0; k < redundancy; k++) {
@@ -156,25 +166,27 @@ void printDataPayload(uint8_t* buffer, size_t speedsCount) {
     uint8_t marker = buffer[2];
     uint8_t extraHeader = buffer[3];
     uint16_t position1 = (buffer[4] << 8) + buffer[5];
-    int16_t speed10 = (buffer[6] << 8) + buffer[7];
-    int16_t speed11 = (buffer[8] << 8) + buffer[9];
-    int16_t speed12 = (buffer[10] << 8) + buffer[11];
-    int16_t speed13 = (buffer[12] << 8) + buffer[13];
-    int16_t speed14 = (buffer[14] << 8) + buffer[15];
+    uint16_t position2 = (buffer[6] << 8) + buffer[7];
 
-    size_t offset = 6 + 2 * speedsCount;
-    uint16_t position2 = (buffer[offset] << 8) + buffer[offset + 1];
-    int16_t speed20 = (buffer[offset + 2] << 8) + buffer[offset + 3];
-    int16_t speed21 = (buffer[offset + 4] << 8) + buffer[offset + 5];
-    int16_t speed22 = (buffer[offset + 6] << 8) + buffer[offset + 7];
-    int16_t speed23 = (buffer[offset + 8] << 8) + buffer[offset + 9];
-    int16_t speed24 = (buffer[offset + 10] << 8) + buffer[offset + 11];
+    int16_t speed10 = (buffer[8] << 8) + buffer[9];
+    int16_t speed11 = (buffer[10] << 8) + buffer[11];
+    int16_t speed12 = (buffer[12] << 8) + buffer[13];
+    int16_t speed13 = (buffer[14] << 8) + buffer[15];
+    int16_t speed14 = (buffer[16] << 8) + buffer[17];
+
+    size_t offset = 8 + 2 * speedsCount;
+    
+    int16_t speed20 = (buffer[offset] << 8) + buffer[offset + 1];
+    int16_t speed21 = (buffer[offset + 2] << 8) + buffer[offset + 3];
+    int16_t speed22 = (buffer[offset + 4] << 8) + buffer[offset + 5];
+    int16_t speed23 = (buffer[offset + 6] << 8) + buffer[offset + 7];
+    int16_t speed24 = (buffer[offset + 8] << 8) + buffer[offset + 9];
 
     offset = 8 + 4 * speedsCount;
     uint16_t buildTimeIn10us = (buffer[offset] << 8) + buffer[offset + 1];
     uint32_t buildTimeInUs = ((uint32_t)buildTimeIn10us) * 10;
 
-    Serial.printf("CRC16: %d ; Marker: %d ; Header: %d ; Position1: %d ; Speeds1: [%d, %d, %d, %d, %d, ...]; Position2: %d ; Speeds2: [%d, %d, %d, %d, %d, ...] ; buildTime: %dµs\n", crc16, marker, extraHeader, position1, speed10, speed11, speed12, speed13, speed14, position2, speed20, speed21, speed22, speed23, speed24, buildTimeInUs);
+    Serial.printf("CRC16: %5d ; Marker: %3d ; Header: %2d ; Position1: %4d ; Position2: %4d ; Speeds1: [%d, %d, %d, %d, %d, ...] ; Speeds2: [%d, %d, %d, %d, %d, ...] ; buildTime: %dµs\n", crc16, marker, extraHeader, position1, position2, speed10, speed11, speed12, speed13, speed14, speed20, speed21, speed22, speed23, speed24, buildTimeInUs);
     #endif
 }
 
@@ -209,6 +221,11 @@ size_t buildDataPayload(uint8_t* buffer, uint8_t marker, int64_t now, uint16_t p
     buffer[p+1] = position1;
     p += 2;
 
+    // Position 2
+    buffer[p] = position2 >> 8;
+    buffer[p+1] = position2;
+    p += 2;
+
     // Speeds 1
     for (size_t k = 0; k < speeds1Count; k++) {
         // Limit speed to int16_t format
@@ -218,11 +235,6 @@ size_t buildDataPayload(uint8_t* buffer, uint8_t marker, int64_t now, uint16_t p
         //Serial.printf("int32: 0x%08X (%d) ; int16: %d ; int16: 0x%02X%02X\n", speeds[k], speeds[k], speed, buffer[p], buffer[p+1]);
         p += 2;
     }
-
-    // Position 2
-    buffer[p] = position2 >> 8;
-    buffer[p+1] = position2;
-    p += 2;
 
     // Speeds 2
     for (size_t k = 0; k < speeds2Count; k++) {

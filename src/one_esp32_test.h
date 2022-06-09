@@ -18,7 +18,7 @@
 
 #include <lib_rotary_encoder_controller.h>
 #include <lib_rotary_encoder_simulator.h>
-#include <lib_controller_test.h>
+#include <lib_simulator_test.h>
 
 #define LED_PIN 2
 

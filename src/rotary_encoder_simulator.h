@@ -21,7 +21,7 @@
 #include <rotary_encoder_config.h>
 #include <lib_rotary_encoder_simulator.h>
 #include <lib_rotary_encoder_controller_spi_master_2.h>
-#include <lib_controller_test.h>
+#include <lib_simulator_test.h>
 #include <lib_datagram.h>
 
 void setup() {
@@ -45,65 +45,62 @@ void loop() {
     // printSimulators();
     // printSensors();
 
-    uint32_t periodInUs = 1;
+    uint32_t periodInUs = 40;
+    uint32_t failedTestPause = 0;
 
     indexSimul(&simul1, periodInUs);
-    // assertCount("Reseting index", sensor1, simul1);
     indexSimul(&simul2, periodInUs);
-    // assertCount("Reseting index", sensor2, simul2);
-    // printSimulators();
-    // printSensors();
+    assertSpiPayload("Indexing sensors", failedTestPause);
 
     moveBothSimulators(true, 0, false, 1, periodInUs);
-    // assertCount("Turning 0 steps", sensor1, simul1);
-    // assertCount("Turning 1 step left", sensor2, simul2);
+    assertSpiPayload("Turning 1 step left (s2)", failedTestPause);
 
+    indexSimul(&simul1, periodInUs);
+    indexSimul(&simul2, periodInUs);
     moveBothSimulators(true, 1, false, 0, periodInUs);
-    // assertCount("Turning 1 steps right", sensor1, simul1);
-    // assertCount("Turning 0 step", sensor2, simul2);
+    assertSpiPayload("Turning 1 step right (s1)", failedTestPause);
 
+    indexSimul(&simul1, periodInUs);
+    indexSimul(&simul2, periodInUs);
     moveBothSimulators(true, 1, false, 1, periodInUs);
-    // assertCount("Turning 1 steps right", sensor1, simul1);
-    // assertCount("Turning 1 step left", sensor2, simul2);
+    assertSpiPayload("Turning 1 step right (s1) and 1 step left (s2)", failedTestPause);
 
-    //printSensors();
-
+    indexSimul(&simul1, periodInUs);
+    indexSimul(&simul2, periodInUs);
     moveBothSimulators(false, 2, true, 3, periodInUs);
-    // assertCount("Turning 2 steps left", sensor1, simul1);
-    // assertCount("Turning 3 step right", sensor2, simul2);
-
-    //printSensors();
+    assertSpiPayload("Turning 2 step left (s1) and 3 step right (s2)", failedTestPause);
 
     moveBothSimulators(true, 3, false, 2, periodInUs);
-    // assertCount("Turning 3 steps right", sensor1, simul1);
-    // assertCount("Turning 2 step left", sensor2, simul2);
+    assertSpiPayload("Turning 3 step right (s1) and 2 step left (s2)", failedTestPause);
 
+    indexSimul(&simul1, periodInUs);
+    indexSimul(&simul2, periodInUs);
     moveBothSimulators(true, 11, false, 7, periodInUs);
-    // assertCount("Turning 11 steps right", sensor1, simul1);
-    // assertCount("Turning 7 steps left", sensor2, simul2);
+    assertSpiPayload("Turning 11 steps right (s1) and 7 steps left (s2)", failedTestPause);
 
-    uint8_t* data = spiMasterProcess();
-
+    indexSimul(&simul1, periodInUs);
+    indexSimul(&simul2, periodInUs);
     moveBothSimulators(true, 101, true, 101, periodInUs);
-    // assertCount("Turning 101 steps right", sensor1, simul1);
-    // assertCount("Turning 101 steps right", sensor2, simul2);
+    assertSpiPayload("Turning 101 steps right (s1) and 101 steps right (s2)", failedTestPause);
 
+    indexSimul(&simul1, periodInUs);
+    indexSimul(&simul2, periodInUs);
     moveBothSimulators(true, 3997, false, 1001, periodInUs);
-    // assertCount("Turning 3997 steps right", sensor1, simul1);
-    // assertCount("Turning 1001 steps left", sensor2, simul2);
+    assertSpiPayload("Turning 3997 steps right (s1) and 1001 steps left (s2)", failedTestPause);
    
     // Turn 1 round one side
+    indexSimul(&simul1, periodInUs);
+    indexSimul(&simul2, periodInUs);
     moveBothSimulators(true, 4003, false, 995, periodInUs);
-    // assertCount("Turning 1 round + 3 steps right", sensor1, simul1);
-    // assertCount("Turning 1 round - 5 steps right", sensor2, simul2);
-    // printSimulators();
-    // printSensors();
+    assertSpiPayload("Turning 4003 steps right (s1) and 995 steps left (s2)", failedTestPause);
 
-    testPendulum(2000, 500, 12, periodInUs);
+    testPendulum(2000, 500, 12, periodInUs, failedTestPause);
 
-    moveBothSimulators(false, 3, false, 0, periodInUs);
+    moveBothSimulators(true, 3, false, 3, periodInUs);
+    assertSpiPayload("Turning 3 step right (s1) and 2 step left (s2)", failedTestPause);
 
-    data = spiMasterProcess();
+    // Print last data payload
+    printDataPayload(spi_master_rx_buf, SPEEDS_COUNT_TO_KEEP);
 
     int64_t endTime = esp_timer_get_time();
     int32_t duration = (int32_t) (endTime - startTime);

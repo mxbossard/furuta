@@ -69,7 +69,7 @@ bool sendSpiReadCommand() {
     return isDataPayloadCrcValid(spi_master_rx_buf) && isMarkerValid(spi_master_rx_buf, timingMarker);
 }
 
-uint8_t* spiMasterProcess() {
+bool spiMasterProcess() {
     //delay(10);
 
     sendSpiTimingCommand();
@@ -78,7 +78,7 @@ uint8_t* spiMasterProcess() {
 
     int8_t retries = 0;
     int16_t waitTimeUs = 100;
-    bool valid;
+    bool valid = false;
     while(valid = sendSpiReadCommand(), !valid && retries < SPI_READ_MAX_RETRY) {
         delayMicroseconds(waitTimeUs);
         retries ++;
@@ -88,14 +88,8 @@ uint8_t* spiMasterProcess() {
         //printDataPayload(spi_master_rx_buf, SPEEDS_COUNT_TO_KEEP);
         #endif
     };
-    
-    if (valid) {
-        printDataPayload(spi_master_rx_buf, SPEEDS_COUNT_TO_KEEP);
-    } else {
-        blinkLed();
-    }
 
-    return spi_master_rx_buf;
+    return valid;
 }
 
 #endif
