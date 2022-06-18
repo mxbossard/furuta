@@ -5,72 +5,95 @@
 
 #include <lib_model.h>
 
-void assertCount(const char* message, AngleSensor sensor, AngleSensorSimulator simulator, uint32_t pause = 0) {
+bool assertEventCount(const char* message, AngleSensor sensor, AngleSensorSimulator simulator, uint32_t pause = 0) {
     if (!simulator.enabled) {
-        return;
+        return true;
     }
     //delay(1);
-    int32_t expectedCount = simulator.position;
-    int32_t drift = abs(expectedCount - sensor.position);
-
-    if (sensor.position != expectedCount) {
-        Serial.printf("Bad count for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor.name, drift, expectedCount, sensor.position, message);
+    int32_t expected = simulator.eventCount;
+    int32_t result = sensor.eventCount;
+    int32_t drift = abs(expected - result);
+    
+    if (drift > 0) {
+        Serial.printf("Bad event count for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor.name, drift, expected, result, message);
         delay(pause);
     }
+
+    return drift == 0;
 }
 
-void assertPosition(const char* message, AngleSensor sensor, AngleSensorSimulator simulator, uint32_t pause = 0) {
+bool assertCount(const char* message, AngleSensor sensor, AngleSensorSimulator simulator, uint32_t pause = 0) {
     if (!simulator.enabled) {
-        return;
+        return true;
     }
     //delay(1);
-    int32_t position = absMod32(sensor.position, sensor.maxPosition);
-    int32_t expectedPosition = absMod32(simulator.position, sensor.maxPosition);
-    int32_t drift = abs(expectedPosition - position);
-    drift = min(drift, sensor.maxPosition - drift);
+    int32_t expected = simulator.counter;
+    int32_t result = sensor.counter;
+    int32_t drift = abs(expected - result);
 
-    if (position != expectedPosition) {
-        Serial.printf("Bad position for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor.name, drift, simulator.position, sensor.position, message);
+    if (drift > 0) {
+        Serial.printf("Bad count for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor.name, drift, expected, result, message);
         delay(pause);
     }
+
+    return drift == 0;
 }
 
-void assertPosition(const char* message, AngleSensorSimulator simulator, int32_t currentCount, uint32_t pause = 0) {
+bool assertPosition(const char* message, AngleSensor sensor, AngleSensorSimulator simulator, uint32_t pause = 0) {
     if (!simulator.enabled) {
-        return;
+        return true;
     }
     //delay(1);
-    int32_t expectedPosition = absMod32(simulator.position, simulator.maxPosition);
-    int32_t drift = abs(expectedPosition - currentCount);
-    drift = min(drift, simulator.maxPosition - drift);
+    uint16_t result = sensor.position;
+    uint16_t expected = simulator.position;
+    uint16_t drift = abs(expected - result);
+    drift = min(drift, (uint16_t) (sensor.maxPosition - drift));
 
-    if (currentCount != expectedPosition) {
-        Serial.printf("Bad position for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", simulator.name, drift, simulator.position, currentCount, message);
+    if (drift > 0) {
+        Serial.printf("Bad position for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor.name, drift, expected, result, message);
         delay(pause);
     }
+
+    return drift == 0;
+}
+
+bool assertData(const char* message, AngleSensor sensor, AngleSensorSimulator simulator, uint32_t pause = 0) {
+    if (!simulator.enabled) {
+        return true;
+    }
+    bool test = assertPosition(message, sensor, simulator, 0);
+    test = assertCount(message, sensor, simulator, 0) && test;
+    test = assertEventCount(message, sensor, simulator, 0) && test;
+
+    if (!test) {
+        blinkLed();
+        delay(pause);
+    }
+
+    return test;
 }
 
 void testModulo() {
     int16_t a = -1;
     uint16_t b = 4000;
-    int32_t c = absMod32(a, b);
-    Serial.printf("%d absMod32 %d = %d\n", a, b, c);
+    uint16_t c = absMod16(a, b);
+    Serial.printf("%d absMod16 %d = %d\n", a, b, c);
 
     a = -1;
-    c = absMod32(a, b);
-    Serial.printf("%d absMod32 %d = %d\n", a, b, c);
+    c = absMod16(a, b);
+    Serial.printf("%d absMod16 %d = %d\n", a, b, c);
 
     a = -4001;
-    c = absMod32(a, b);
-    Serial.printf("%d absMod32 %d = %d\n", a, b, c);
+    c = absMod16(a, b);
+    Serial.printf("%d absMod16 %d = %d\n", a, b, c);
 
     a = 4000;
-    c = absMod32(a, b);
-    Serial.printf("%d absMod32 %d = %d\n", a, b, c);
+    c = absMod16(a, b);
+    Serial.printf("%d absMod16 %d = %d\n", a, b, c);
 
     a = 4001;
-    c = absMod32(a, b);
-    Serial.printf("%d absMod32 %d = %d\n", a, b, c);
+    c = absMod16(a, b);
+    Serial.printf("%d absMod16 %d = %d\n", a, b, c);
 }
 
 void testPendulum(uint16_t amplitude1, uint16_t amplitude2, uint16_t bounces, uint32_t periodInUs) {
