@@ -105,40 +105,43 @@ bool testPendulumWithAssertion(uint16_t amplitude1, uint16_t amplitude2, uint16_
     indexSimul(&simul1, periodInUs);
     indexSimul(&simul2, periodInUs);
     for (; bounces > 0 ; bounces --) {
+        bool failed1 = false, failed2 = false;
         moveBothSimulators(true, amplitude1, false, amplitude2, periodInUs);
         char message[60];
         sprintf(message, "Pendulum rising bounce %d", bounces);
-        testFailed = !assertData(message, sensor1, simul1) || testFailed;
-        testFailed = !assertData(message, sensor2, simul2) || testFailed;
+        failed1 = !assertData(message, sensor1, simul1) || testFailed;
+        failed2 = !assertData(message, sensor2, simul2) || testFailed;
 
         moveBothSimulators(false, amplitude1, true, amplitude2, periodInUs);
         sprintf(message, "Pendulum falling bounce %d", bounces);
-        testFailed = !assertData(message, sensor1, simul1) || testFailed;
-        testFailed = !assertData(message, sensor2, simul2) || testFailed;
+        failed1 = failed1 || !assertData(message, sensor1, simul1);
+        failed2 = failed2 || !assertData(message, sensor2, simul2);
 
         indexSimul(&simul1, periodInUs);
         sprintf(message, "Reseting index falling bounce %d", bounces);
-        testFailed = !assertData(message, sensor1, simul1) || testFailed;
+        failed1 |= !assertData(message, sensor1, simul1);
         indexSimul(&simul2, periodInUs);
-        testFailed = !assertData(message, sensor2, simul2) || testFailed;
+        failed2 |= !assertData(message, sensor2, simul2);
 
         amplitude1 -= (1/bounces) * amplitude1;
         amplitude2 -= (1/bounces) * amplitude2;
         moveBothSimulators(false, amplitude1, true, amplitude2, periodInUs);
         sprintf(message, "Pendulum rising back bounce %d", bounces);
-        testFailed = !assertData(message, sensor1, simul1) || testFailed;
-        testFailed = !assertData(message, sensor2, simul2) || testFailed;
+        failed1 |= !assertData(message, sensor1, simul1);
+        failed2 |= !assertData(message, sensor2, simul2);
 
         moveBothSimulators(false, amplitude1, true, amplitude2, periodInUs);
         sprintf(message, "Pendulum falling back bounce %d", bounces);
-        testFailed = !assertData(message, sensor1, simul1) || testFailed;
-        testFailed = !assertData(message, sensor2, simul2) || testFailed;
+        failed1 = failed1 || !assertData(message, sensor1, simul1);
+        failed2 = failed2 || !assertData(message, sensor2, simul2);
 
         indexSimul(&simul1, periodInUs);
         sprintf(message, "Reseting index falling back bounce %d", bounces);
-        testFailed = !assertData(message, sensor1, simul1) || testFailed;
+        failed1 |= !assertData(message, sensor1, simul1);
         indexSimul(&simul2, periodInUs);
-        testFailed = !assertData(message, sensor2, simul2) || testFailed;
+        failed2 |= !assertData(message, sensor2, simul2);
+
+        testFailed |= failed1 || failed2;
     }
     return !testFailed;
 }
