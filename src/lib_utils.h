@@ -5,11 +5,6 @@
 
 #define CRC16_INITIAL_VALUE   0xFFFF
 
-int32_t absMod32(int32_t a, uint16_t b) {
-    int32_t c = a % b;
-    return (c < 0) ? c + b : c;
-}
-
 uint16_t absMod16(int32_t a, uint16_t b) {
     int32_t c = a % b;
     c = (c < 0) ? c + b : c;

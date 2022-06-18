@@ -6,8 +6,8 @@
 #include <lib_utils.h>
 #include <lib_model.h>
 
-AngleSensorSimulator simul1 = {SIMUL_1_PIN_A, SIMUL_1_PIN_B, SIMUL_1_PIN_INDEX, 4000, 0, 0, true, "simula1"};
-AngleSensorSimulator simul2 = {SIMUL_2_PIN_A, SIMUL_2_PIN_B, SIMUL_2_PIN_INDEX, 1000, 0, 0, true, "simula2"};
+AngleSensorSimulator simul1 = {SIMUL_1_PIN_A, SIMUL_1_PIN_B, SIMUL_1_PIN_INDEX, true, 4000, 0, 0, 0, 0, true, "simula1"};
+AngleSensorSimulator simul2 = {SIMUL_2_PIN_A, SIMUL_2_PIN_B, SIMUL_2_PIN_INDEX, true, 1000, 0, 0, 0, 0, true, "simula2"};
 
 void printSimulatorOutputs() {
     Serial.printf("OUTPUTS [%s] pinA(%d): %d pinB(%d): %d pinIndex(%d): %d", simul1.name, simul1.pinA, digitalRead(simul1.pinA), simul1.pinB, digitalRead(simul1.pinB), simul1.pinIndex, digitalRead(simul1.pinIndex));
@@ -21,7 +21,13 @@ void printSimulator(AngleSensorSimulator simulator) {
 
 void printSimulators() {
     delay(1);
-    Serial.printf("[%s] position: %d ; [%s] position: %d\n", simul1.name, simul1.position, simul2.name, simul2.position);
+    if (simul1.enabled) {
+        Serial.printf("[%s] position1: %d counter1: %d events1: %d ; ", simul1.name, simul1.position, simul1.counter, simul1.eventCount);
+    }
+    if (simul2.enabled) {
+        Serial.printf("[%s] position2: %d counter2: %d events2: %d", simul2.name, simul2.position, simul2.counter, simul2.eventCount);
+    }
+    Serial.printf("\n");
 }
 
 
@@ -33,17 +39,23 @@ void moveSimulator(AngleSensorSimulator* simulator, bool direction, uint32_t ste
     //Serial.printf("[%s] Moving %d step in direction: %d with period of %d µs\n", simulator.name, step, direction, periodInUs);
 
     for(uint32_t k = 0; k < step; k++) {
-        
+        simulator->eventCount ++;
+
         if (direction) {
-            simulator->position ++;
+            // simulator->position ++;
             simulator->counter ++;
+            simulator->internalState ++;
         } else {
-            simulator->position --;
+            // simulator->position --;
             simulator->counter --;
+            simulator->internalState --;
         }
+
+        simulator->position = absMod16(simulator->counter, simulator->maxPosition);
         
-        int32_t state = absMod32(simulator->counter, 4);
-        //Serial.printf("simulator new state: %d\n", state);
+        uint16_t state = absMod16(simulator->internalState, 4);
+        // Serial.printf("%s simulator new state: %d\n", simulator->name, state);
+        // delay(1000);
 
         switch(state) {
             case 0:
@@ -106,10 +118,16 @@ void moveBothSimulators(bool direction1, uint32_t step1, bool direction2, uint32
 
 void indexSimul(AngleSensorSimulator* simulator, uint32_t periodInUs) {
     //Serial.printf("[%s] Reseting index\n", simulator.name);
+    simulator->position = 0;
+    simulator->counter = 0;
+    simulator->eventCount = 0;
+
+    // digitalWrite(simulator.pinA, LOW);
+    // digitalWrite(simulator.pinB, LOW);
+
     digitalWrite(simulator->pinIndex, HIGH);
     delayMicroseconds(periodInUs);
     digitalWrite(simulator->pinIndex, LOW);
-    simulator->position = 0;
 }
 
 void simulatorSetup() {
