@@ -15,6 +15,9 @@
 
 #define LED_PIN (gpio_num_t) 22
 
+//#define LOG_INFO
+//#define LOG_WARN
+
 #include <rotary_encoder_config.h>
 #include <lib_rotary_encoder_controller.h>
 #include <lib_rotary_encoder_controller_spi_slave_2.h>

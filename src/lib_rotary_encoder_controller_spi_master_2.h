@@ -63,37 +63,37 @@ bool sendSpiReadCommand() {
     //printFullPayload(spi_master_tx_buf, BUFFER_SIZE);
     
     sendSpiTransaction(spi_master_tx_buf, spi_master_rx_buf, BUFFER_SIZE);
+    //printFullPayload(spi_master_rx_buf, BUFFER_SIZE);
 
-    // Check CRC8
-    bool validCrc = checkDataCrc8(spi_master_rx_buf);
-    // Check marker
-    bool validMarker = checkMarker(spi_master_rx_buf, timingMarker);
-
-    return validCrc && validMarker;
+    // Check CRC and marker
+    return isDataPayloadCrcValid(spi_master_rx_buf) && isMarkerValid(spi_master_rx_buf, timingMarker);
 }
 
 uint8_t* spiMasterProcess() {
-    delay(10);
+    //delay(10);
 
     sendSpiTimingCommand();
 
-    delay(100);
+    delayMicroseconds(100);
 
     int8_t retries = 0;
-    int16_t waitTime = 2;
+    int16_t waitTimeUs = 100;
     bool valid;
     while(valid = sendSpiReadCommand(), !valid && retries < SPI_READ_MAX_RETRY) {
-        delay(waitTime);
+        delayMicroseconds(waitTimeUs);
         retries ++;
-        waitTime = pow(2, retries);
+        //waitTime = pow(2, retries);
+        #ifdef LOG_DEBUG
         Serial.printf("Retrying sendSpiReadCommand() #%d after %dms... \n", retries, waitTime);
         //printDataPayload(spi_master_rx_buf, SPEEDS_COUNT_TO_KEEP);
+        #endif
     };
     
-    if (!valid) {
+    if (valid) {
+        printDataPayload(spi_master_rx_buf, SPEEDS_COUNT_TO_KEEP);
+    } else {
         blinkLed();
     }
-    //printDataPayload(spi_master_rx_buf, SPEEDS_COUNT_TO_KEEP);
 
     return spi_master_rx_buf;
 }
