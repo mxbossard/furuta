@@ -14,8 +14,10 @@ portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 CircularBuffer timings1;
 CircularBuffer timings2;
 
-AngleSensor sensor1 = {SENSOR_1_PIN_A, SENSOR_1_PIN_B, SENSOR_1_PIN_INDEX, true, 4000, 0, 0, 0, "sensor1"};
-AngleSensor sensor2 = {SENSOR_2_PIN_A, SENSOR_2_PIN_B, SENSOR_2_PIN_INDEX, true, 1000, 0, 0, 0, "sensor2"};
+volatile AngleSensor sensor1 = {SENSOR_1_PIN_A, SENSOR_1_PIN_B, SENSOR_1_PIN_INDEX, true, 4000, 0, 0, 0, "sensor1"};
+volatile AngleSensor sensor2 = {SENSOR_2_PIN_A, SENSOR_2_PIN_B, SENSOR_2_PIN_INDEX, true, 1000, 0, 0, 0, "sensor2"};
+
+int32_t time1a, time1b, time2a, time2b;
 
 /*
     Rotary encoder signals schema.Z
@@ -52,6 +54,8 @@ void IRAM_ATTR moveSensor1A() {
     }
     sensor1.position = absMod16(sensor1.counter, sensor1.maxPosition);
     portEXIT_CRITICAL(&mux);
+        
+    time1a = max(time1a, (int32_t) (esp_timer_get_time() - usTiming));
 }
 
 void IRAM_ATTR moveSensor1B() {
@@ -74,6 +78,8 @@ void IRAM_ATTR moveSensor1B() {
     }
     sensor1.position = absMod16(sensor1.counter, sensor1.maxPosition);
     portEXIT_CRITICAL(&mux);
+
+    time1b = max(time1b, (int32_t) (esp_timer_get_time() - usTiming));
 }
 
 void IRAM_ATTR resetSensor1() {
@@ -102,8 +108,11 @@ void IRAM_ATTR moveSensor2A() {
         pushCircularBuffer(&timings2, -usTiming);
         sensor2.counter --;
     }
+
     sensor2.position = absMod16(sensor2.counter, sensor2.maxPosition);
     portEXIT_CRITICAL(&mux);
+
+    time2a = max(time2a, (int32_t) (esp_timer_get_time() - usTiming));
 }
 
 void IRAM_ATTR moveSensor2B() {
@@ -126,6 +135,8 @@ void IRAM_ATTR moveSensor2B() {
     }
     sensor2.position = absMod16(sensor2.counter, sensor2.maxPosition);
     portEXIT_CRITICAL(&mux);
+    
+    time2b = max(time2b, (int32_t) (esp_timer_get_time() - usTiming));
 }
 
 void IRAM_ATTR resetSensor2() {

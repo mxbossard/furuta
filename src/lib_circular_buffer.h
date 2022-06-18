@@ -15,7 +15,7 @@ size_t sizeCircularBuffer(CircularBuffer b) {
     return b.size;
 }
 
-void pushCircularBuffer(CircularBuffer *b, int64_t data) {
+void IRAM_ATTR pushCircularBuffer(CircularBuffer *b, int64_t data) {
     b->data[b->offset] = data;
     b->offset ++;
     b->lastPosition ++;

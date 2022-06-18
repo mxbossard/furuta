@@ -8,59 +8,61 @@
 #include "lib_datagram.h"
 #include "lib_rotary_encoder_simulator.h"
 
-bool assertEventCount(const char* message, AngleSensor sensor, AngleSensorSimulator simulator, uint32_t pause = 0) {
+bool assertEventCount(const char* message, volatile AngleSensor *sensor, AngleSensorSimulator simulator, uint32_t pause = 0) {
     if (!simulator.enabled) {
         return true;
     }
     //delay(1);
     int32_t expected = simulator.eventCount;
-    int32_t result = sensor.eventCount;
+    int32_t result = sensor->eventCount;
     int32_t drift = abs(expected - result);
     
     if (drift > 0) {
-        Serial.printf("Bad event count for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor.name, drift, expected, result, message);
+        Serial.printf("Bad event count for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor->name, drift, expected, result, message);
+        Serial.printf("Last interrupt timings: 1A: %d µs ; 1B: %d µs ; 2A: %d µs ; 2B: %d µs\n", (int32_t) time1a, (int32_t) time1b, (int32_t) time2a, (int32_t) time2b);
+        time1a = 0, time1b = 0, time2a = 0, time2b = 0;
         delay(pause);
     }
 
     return drift == 0;
 }
 
-bool assertCount(const char* message, AngleSensor sensor, AngleSensorSimulator simulator, uint32_t pause = 0) {
+bool assertCount(const char* message, volatile AngleSensor *sensor, AngleSensorSimulator simulator, uint32_t pause = 0) {
     if (!simulator.enabled) {
         return true;
     }
     //delay(1);
     int32_t expected = simulator.counter;
-    int32_t result = sensor.counter;
+    int32_t result = sensor->counter;
     int32_t drift = abs(expected - result);
 
     if (drift > 0) {
-        Serial.printf("Bad count for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor.name, drift, expected, result, message);
+        Serial.printf("Bad count for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor->name, drift, expected, result, message);
         delay(pause);
     }
 
     return drift == 0;
 }
 
-bool assertPosition(const char* message, AngleSensor sensor, AngleSensorSimulator simulator, uint32_t pause = 0) {
+bool assertPosition(const char* message, volatile AngleSensor *sensor, AngleSensorSimulator simulator, uint32_t pause = 0) {
     if (!simulator.enabled) {
         return true;
     }
     //delay(1);
-    uint16_t result = sensor.position;
+    uint16_t result = sensor->position;
     uint16_t expected = simulator.position;
     uint16_t drift = abs(expected - result);
-    drift = min(drift, (uint16_t) (sensor.maxPosition - drift));
+    drift = min(drift, (uint16_t) (sensor->maxPosition - drift));
 
     if (drift > 0) {
-        Serial.printf("Bad position for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor.name, drift, expected, result, message);
+        Serial.printf("Bad position for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor->name, drift, expected, result, message);
         delay(pause);
     }
 
     return drift == 0;
 }
 
-bool assertData(const char* message, AngleSensor sensor, AngleSensorSimulator simulator, uint32_t pause = 0) {
+bool assertData(const char* message, volatile AngleSensor* sensor, AngleSensorSimulator simulator, uint32_t pause = 0) {
     if (!simulator.enabled) {
         return true;
     }
@@ -109,37 +111,37 @@ bool testPendulumWithAssertion(uint16_t amplitude1, uint16_t amplitude2, uint16_
         moveBothSimulators(true, amplitude1, false, amplitude2, periodInUs);
         char message[60];
         sprintf(message, "Pendulum rising bounce %d", bounces);
-        failed1 = !assertData(message, sensor1, simul1) || testFailed;
-        failed2 = !assertData(message, sensor2, simul2) || testFailed;
+        failed1 = !assertData(message, &sensor1, simul1) || testFailed;
+        failed2 = !assertData(message, &sensor2, simul2) || testFailed;
 
         moveBothSimulators(false, amplitude1, true, amplitude2, periodInUs);
         sprintf(message, "Pendulum falling bounce %d", bounces);
-        failed1 = failed1 || !assertData(message, sensor1, simul1);
-        failed2 = failed2 || !assertData(message, sensor2, simul2);
+        failed1 = failed1 || !assertData(message, &sensor1, simul1);
+        failed2 = failed2 || !assertData(message, &sensor2, simul2);
 
         indexSimul(&simul1, periodInUs);
         sprintf(message, "Reseting index falling bounce %d", bounces);
-        failed1 |= !assertData(message, sensor1, simul1);
+        failed1 |= !assertData(message, &sensor1, simul1);
         indexSimul(&simul2, periodInUs);
-        failed2 |= !assertData(message, sensor2, simul2);
+        failed2 |= !assertData(message, &sensor2, simul2);
 
-        amplitude1 -= (1/bounces) * amplitude1;
-        amplitude2 -= (1/bounces) * amplitude2;
+        amplitude1 -= ((float)1/bounces) * amplitude1;
+        amplitude2 -= ((float)1/bounces) * amplitude2;
         moveBothSimulators(false, amplitude1, true, amplitude2, periodInUs);
         sprintf(message, "Pendulum rising back bounce %d", bounces);
-        failed1 |= !assertData(message, sensor1, simul1);
-        failed2 |= !assertData(message, sensor2, simul2);
+        failed1 |= !assertData(message, &sensor1, simul1);
+        failed2 |= !assertData(message, &sensor2, simul2);
 
         moveBothSimulators(false, amplitude1, true, amplitude2, periodInUs);
         sprintf(message, "Pendulum falling back bounce %d", bounces);
-        failed1 = failed1 || !assertData(message, sensor1, simul1);
-        failed2 = failed2 || !assertData(message, sensor2, simul2);
+        failed1 = failed1 || !assertData(message, &sensor1, simul1);
+        failed2 = failed2 || !assertData(message, &sensor2, simul2);
 
         indexSimul(&simul1, periodInUs);
         sprintf(message, "Reseting index falling back bounce %d", bounces);
-        failed1 |= !assertData(message, sensor1, simul1);
+        failed1 |= !assertData(message, &sensor1, simul1);
         indexSimul(&simul2, periodInUs);
-        failed2 |= !assertData(message, sensor2, simul2);
+        failed2 |= !assertData(message, &sensor2, simul2);
 
         testFailed |= failed1 || failed2;
     }

@@ -5,7 +5,7 @@
 
 #define CRC16_INITIAL_VALUE   0xFFFF
 
-uint16_t absMod16(int32_t a, uint16_t b) {
+uint16_t IRAM_ATTR absMod16(int32_t a, uint16_t b) {
     int32_t c = a % b;
     c = (c < 0) ? c + b : c;
     return (uint16_t) c;

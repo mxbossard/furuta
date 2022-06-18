@@ -59,20 +59,24 @@ void moveSimulator(AngleSensorSimulator* simulator, bool direction, uint32_t ste
 
         switch(state) {
             case 0:
-                digitalWrite(simulator->pinA, LOW);
-                digitalWrite(simulator->pinB, LOW);
+                gpio_set_level((gpio_num_t) simulator->pinA, LOW);
+                gpio_set_level((gpio_num_t) simulator->pinB, LOW);
+                //while(gpio_get_level((gpio_num_t) simulator->pinA) != LOW && (gpio_get_level((gpio_num_t) simulator->pinB) != LOW));
                 break;
             case 1:
-                digitalWrite(simulator->pinA, LOW);
-                digitalWrite(simulator->pinB, HIGH);
+                gpio_set_level((gpio_num_t) simulator->pinA, LOW);
+                gpio_set_level((gpio_num_t) simulator->pinB, HIGH);
+                //while(gpio_get_level((gpio_num_t) simulator->pinA) != LOW && (gpio_get_level((gpio_num_t) simulator->pinB) != HIGH));
                 break;
             case 2:
-                digitalWrite(simulator->pinA, HIGH);
-                digitalWrite(simulator->pinB, HIGH);
+                gpio_set_level((gpio_num_t) simulator->pinA, HIGH);
+                gpio_set_level((gpio_num_t) simulator->pinB, HIGH);
+                //while(gpio_get_level((gpio_num_t) simulator->pinA) != HIGH && (gpio_get_level((gpio_num_t) simulator->pinB) != HIGH));
                 break;
             case 3:
-                digitalWrite(simulator->pinA, HIGH);
-                digitalWrite(simulator->pinB, LOW);
+                gpio_set_level((gpio_num_t) simulator->pinA, HIGH);
+                gpio_set_level((gpio_num_t) simulator->pinB, LOW);
+                //while(gpio_get_level((gpio_num_t) simulator->pinA) != HIGH && (gpio_get_level((gpio_num_t) simulator->pinB) != LOW));
                 break;
             default:
                 // should not exists
