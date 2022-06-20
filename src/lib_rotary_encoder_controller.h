@@ -17,8 +17,6 @@ CircularBuffer timings2;
 volatile AngleSensor sensor1 = {SENSOR_1_PIN_A, SENSOR_1_PIN_B, SENSOR_1_PIN_INDEX, true, 4000, 0, 0, 0, "sensor1"};
 volatile AngleSensor sensor2 = {SENSOR_2_PIN_A, SENSOR_2_PIN_B, SENSOR_2_PIN_INDEX, true, 1000, 0, 0, 0, "sensor2"};
 
-int32_t time1a, time1b, time2a, time2b;
-
 /*
     Rotary encoder signals schema.Z
 
@@ -34,117 +32,58 @@ int32_t time1a, time1b, time2a, time2b;
          +---------+         +---------+         +----- 0
 */
 
-void IRAM_ATTR moveSensor1A() {
+void IRAM_ATTR registerEvent0(volatile AngleSensor* sensor, CircularBuffer* cb, bool eventA) {
     int64_t usTiming = esp_timer_get_time();
 
-    bool aLevel = gpio_get_level((gpio_num_t) sensor1.pinA);
-    bool bLevel = gpio_get_level((gpio_num_t) sensor1.pinB);
+    bool aLevel = gpio_get_level((gpio_num_t) sensor->pinA);
+    bool bLevel = gpio_get_level((gpio_num_t) sensor->pinB);
 
     portENTER_CRITICAL(&mux);
-    sensor1.eventCount ++;
+    sensor->eventCount ++;
 
-    if (aLevel == bLevel) {
+    if ((eventA && aLevel == bLevel) || (!eventA && aLevel != bLevel)) {
         // Increment counter
-        pushCircularBuffer(&timings1, usTiming);
-        sensor1.counter ++;
+        pushCircularBuffer(cb, usTiming);
+        sensor->counter ++;
     } else {
         // Decrement counter
-        pushCircularBuffer(&timings1, -usTiming);
-        sensor1.counter --;
+        pushCircularBuffer(cb, -usTiming);
+        sensor->counter --;
     }
-    sensor1.position = absMod16(sensor1.counter, sensor1.maxPosition);
+    sensor->position = absMod16(sensor->counter, sensor->maxPosition);
     portEXIT_CRITICAL(&mux);
-        
-    time1a = max(time1a, (int32_t) (esp_timer_get_time() - usTiming));
+}
+
+void IRAM_ATTR indexSensor(volatile AngleSensor* sensor) {
+    portENTER_CRITICAL(&mux);
+    sensor->counter = 0;
+    sensor->position = 0;
+    sensor->eventCount = 0;
+    portEXIT_CRITICAL(&mux);
+}
+
+void IRAM_ATTR moveSensor1A() {
+    registerEvent0(&sensor1, &timings1, true);
 }
 
 void IRAM_ATTR moveSensor1B() {
-    int64_t usTiming = esp_timer_get_time();
-
-    bool aLevel = gpio_get_level((gpio_num_t) sensor1.pinA);
-    bool bLevel = gpio_get_level((gpio_num_t) sensor1.pinB);
-
-    portENTER_CRITICAL(&mux);
-    sensor1.eventCount ++;
-
-    if (aLevel != bLevel) {
-        // Increment counter
-        pushCircularBuffer(&timings1, usTiming);
-        sensor1.counter ++;
-    } else {
-        // Decrement counter
-        pushCircularBuffer(&timings1, -usTiming);
-        sensor1.counter --;
-    }
-    sensor1.position = absMod16(sensor1.counter, sensor1.maxPosition);
-    portEXIT_CRITICAL(&mux);
-
-    time1b = max(time1b, (int32_t) (esp_timer_get_time() - usTiming));
+    registerEvent0(&sensor1, &timings1, false);
 }
 
 void IRAM_ATTR resetSensor1() {
-    portENTER_CRITICAL(&mux);
-    sensor1.counter = 0;
-    sensor1.position = 0;
-    sensor1.eventCount = 0;
-    portEXIT_CRITICAL(&mux);
+    indexSensor(&sensor1);
 }
 
 void IRAM_ATTR moveSensor2A() {
-    int64_t usTiming = esp_timer_get_time();
-
-    bool aLevel = gpio_get_level((gpio_num_t) sensor2.pinA);
-    bool bLevel = gpio_get_level((gpio_num_t) sensor2.pinB);
-
-    portENTER_CRITICAL(&mux);
-    sensor2.eventCount ++;
-
-    if (aLevel == bLevel) {
-        // Increment position
-        pushCircularBuffer(&timings2, usTiming);
-        sensor2.counter ++;
-    } else {
-        // Decrement position
-        pushCircularBuffer(&timings2, -usTiming);
-        sensor2.counter --;
-    }
-
-    sensor2.position = absMod16(sensor2.counter, sensor2.maxPosition);
-    portEXIT_CRITICAL(&mux);
-
-    time2a = max(time2a, (int32_t) (esp_timer_get_time() - usTiming));
+    registerEvent0(&sensor2, &timings2, true);
 }
 
 void IRAM_ATTR moveSensor2B() {
-    int64_t usTiming = esp_timer_get_time();
-
-    bool aLevel = gpio_get_level((gpio_num_t) sensor2.pinA);
-    bool bLevel = gpio_get_level((gpio_num_t) sensor2.pinB);
-
-    portENTER_CRITICAL(&mux);
-    sensor2.eventCount ++;
-
-    if (aLevel != bLevel) {
-        // Increment position
-        pushCircularBuffer(&timings2, usTiming);
-        sensor2.counter ++;
-    } else {
-        // Decrement position
-        pushCircularBuffer(&timings2, -usTiming);
-        sensor2.counter --;
-    }
-    sensor2.position = absMod16(sensor2.counter, sensor2.maxPosition);
-    portEXIT_CRITICAL(&mux);
-    
-    time2b = max(time2b, (int32_t) (esp_timer_get_time() - usTiming));
+    registerEvent0(&sensor2, &timings2, false);
 }
 
 void IRAM_ATTR resetSensor2() {
-    portENTER_CRITICAL(&mux);
-    sensor2.counter = 0;
-    sensor2.position = 0;
-    sensor2.eventCount = 0;
-    portEXIT_CRITICAL(&mux);
+    indexSensor(&sensor2);
 }
 
 int64_t* timingsBuffer1 = (int64_t*) malloc(sizeof(int64_t) * SPEEDS_COUNT_TO_KEEP);

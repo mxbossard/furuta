@@ -19,8 +19,6 @@ bool assertEventCount(const char* message, volatile AngleSensor *sensor, AngleSe
     
     if (drift > 0) {
         Serial.printf("Bad event count for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor->name, drift, expected, result, message);
-        Serial.printf("Last interrupt timings: 1A: %d µs ; 1B: %d µs ; 2A: %d µs ; 2B: %d µs\n", (int32_t) time1a, (int32_t) time1b, (int32_t) time2a, (int32_t) time2b);
-        time1a = 0, time1b = 0, time2a = 0, time2b = 0;
         delay(pause);
     }
 
