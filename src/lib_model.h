@@ -12,6 +12,7 @@ struct AngleSensor {
     int32_t counter; // Position not rounded to maxPosition
     uint16_t position; // Position rounded to maxPosition
     uint32_t eventCount; // Event count received
+    int8_t previousState; // One of 4 quadrature state
     const char* name;
 };
 
