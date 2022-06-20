@@ -32,7 +32,7 @@ volatile AngleSensor sensor2 = {SENSOR_2_PIN_A, SENSOR_2_PIN_B, SENSOR_2_PIN_IND
          +---------+         +---------+         +----- 0
 */
 
-void IRAM_ATTR registerEvent0(volatile AngleSensor* sensor, CircularBuffer* cb, bool eventA) {
+void IRAM_ATTR registerEvent(volatile AngleSensor* sensor, CircularBuffer* cb, bool eventA) {
     int64_t usTiming = esp_timer_get_time();
 
     bool aLevel = gpio_get_level((gpio_num_t) sensor->pinA);
@@ -54,6 +54,10 @@ void IRAM_ATTR registerEvent0(volatile AngleSensor* sensor, CircularBuffer* cb, 
     portEXIT_CRITICAL(&mux);
 }
 
+void IRAM_ATTR registerSmartEvent(volatile AngleSensor* sensor, CircularBuffer* cb, bool eventA) {
+    // If controller missed events since last registered state, take into account missing steps.
+}
+
 void IRAM_ATTR indexSensor(volatile AngleSensor* sensor) {
     portENTER_CRITICAL(&mux);
     sensor->counter = 0;
@@ -63,11 +67,11 @@ void IRAM_ATTR indexSensor(volatile AngleSensor* sensor) {
 }
 
 void IRAM_ATTR moveSensor1A() {
-    registerEvent0(&sensor1, &timings1, true);
+    registerEvent(&sensor1, &timings1, true);
 }
 
 void IRAM_ATTR moveSensor1B() {
-    registerEvent0(&sensor1, &timings1, false);
+    registerEvent(&sensor1, &timings1, false);
 }
 
 void IRAM_ATTR resetSensor1() {
@@ -75,11 +79,11 @@ void IRAM_ATTR resetSensor1() {
 }
 
 void IRAM_ATTR moveSensor2A() {
-    registerEvent0(&sensor2, &timings2, true);
+    registerEvent(&sensor2, &timings2, true);
 }
 
 void IRAM_ATTR moveSensor2B() {
-    registerEvent0(&sensor2, &timings2, false);
+    registerEvent(&sensor2, &timings2, false);
 }
 
 void IRAM_ATTR resetSensor2() {
