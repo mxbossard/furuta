@@ -47,7 +47,7 @@ void loop() {
     // printSimulators();
     // printSensors();
 
-    uint32_t periodInUs = 10;
+    uint32_t periodInUs = 1;
 
     bool testFailed = false;
 
