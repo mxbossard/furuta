@@ -6,26 +6,26 @@
 #include <lib_utils.h>
 #include <lib_model.h>
 
-AngleSensorSimulator simul1 = {SIMUL_1_PIN_A, SIMUL_1_PIN_B, SIMUL_1_PIN_INDEX, true, 4000, 0, 0, 0, 0, true, "simula1"};
-AngleSensorSimulator simul2 = {SIMUL_2_PIN_A, SIMUL_2_PIN_B, SIMUL_2_PIN_INDEX, true, 1000, 0, 0, 0, 0, true, "simula2"};
+AngleSensorSimulator simul1 = {(AngleSensor*) &sensor1, SIMUL_1_PIN_A, SIMUL_1_PIN_B, SIMUL_1_PIN_INDEX, 0, 0, 0, 0, true};
+AngleSensorSimulator simul2 = {(AngleSensor*) &sensor2, SIMUL_2_PIN_A, SIMUL_2_PIN_B, SIMUL_2_PIN_INDEX, 0, 0, 0, 0, true};
 
 void printSimulatorOutputs() {
-    Serial.printf("OUTPUTS [%s] pinA(%d): %d pinB(%d): %d pinIndex(%d): %d", simul1.name, simul1.pinA, digitalRead(simul1.pinA), simul1.pinB, digitalRead(simul1.pinB), simul1.pinIndex, digitalRead(simul1.pinIndex));
-    Serial.printf(" ; [%s] pinA(%d): %d pinB(%d): %d pinIndex(%d): %d\n", simul2.name, simul2.pinA, digitalRead(simul2.pinA), simul2.pinB, digitalRead(simul2.pinB), simul2.pinIndex, digitalRead(simul2.pinIndex));
+    Serial.printf("OUTPUTS [%s] pinA(%d): %d pinB(%d): %d pinIndex(%d): %d", simul1.sensor->name, simul1.pinA, digitalRead(simul1.pinA), simul1.pinB, digitalRead(simul1.pinB), simul1.pinIndex, digitalRead(simul1.pinIndex));
+    Serial.printf(" ; [%s] pinA(%d): %d pinB(%d): %d pinIndex(%d): %d\n", simul2.sensor->name, simul2.pinA, digitalRead(simul2.pinA), simul2.pinB, digitalRead(simul2.pinB), simul2.pinIndex, digitalRead(simul2.pinIndex));
 }
 
 void printSimulator(AngleSensorSimulator simulator) {
     delay(1);
-    Serial.printf("[%s] position: %d\n", simulator.name, simulator.position);
+    Serial.printf("[%s] position: %d\n", simulator.sensor->name, simulator.position);
 }
 
 void printSimulators() {
     delay(1);
     if (simul1.enabled) {
-        Serial.printf("[%s] position1: %d counter1: %d events1: %d ; ", simul1.name, simul1.position, simul1.counter, simul1.eventCount);
+        Serial.printf("[%s] position1: %d counter1: %d events1: %d ; ", simul1.sensor->name, simul1.position, simul1.counter, simul1.eventCount);
     }
     if (simul2.enabled) {
-        Serial.printf("[%s] position2: %d counter2: %d events2: %d", simul2.name, simul2.position, simul2.counter, simul2.eventCount);
+        Serial.printf("[%s] position2: %d counter2: %d events2: %d", simul2.sensor->name, simul2.position, simul2.counter, simul2.eventCount);
     }
     Serial.printf("\n");
 }
@@ -51,7 +51,11 @@ void moveSimulator(AngleSensorSimulator* simulator, bool direction, uint32_t ste
             simulator->internalState --;
         }
 
-        simulator->position = absMod16(simulator->counter, simulator->maxPosition);
+        if (simulator->sensor->quadratureMode) {
+            simulator->position = absMod16(simulator->counter, simulator->sensor->maxPosition);
+        } else {
+            simulator->position = absMod16(simulator->counter, simulator->sensor->maxPosition * 4) / 4;
+        }
         
         uint16_t state = absMod16(simulator->internalState, 4);
         // Serial.printf("%s simulator new state: %d\n", simulator->name, state);

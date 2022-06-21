@@ -11,13 +11,13 @@
 
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
+const static int8_t QUADRATURE_STATES[4] = {0, 1, 3, 2};
+
 CircularBuffer timings1;
 CircularBuffer timings2;
 
-const static int8_t QUADRATURE_STATES[4] = {0, 1, 3, 2};
-
-volatile AngleSensor sensor1 = {SENSOR_1_PIN_A, SENSOR_1_PIN_B, SENSOR_1_PIN_INDEX, true, 4000, 0, 0, 0, -1, "sensor1"};
-volatile AngleSensor sensor2 = {SENSOR_2_PIN_A, SENSOR_2_PIN_B, SENSOR_2_PIN_INDEX, true, 1000, 0, 0, 0, -1, "sensor2"};
+volatile AngleSensor sensor1 = {"sensor1", SENSOR_1_PIN_A, SENSOR_1_PIN_B, SENSOR_1_PIN_INDEX, false, 4000, &timings1, 0, 0, 0, -1};
+volatile AngleSensor sensor2 = {"sensor2", SENSOR_2_PIN_A, SENSOR_2_PIN_B, SENSOR_2_PIN_INDEX, false, 1000, &timings2, 0, 0, 0, -1};
 
 /*
     Rotary encoder signals schema.Z
@@ -34,7 +34,7 @@ volatile AngleSensor sensor2 = {SENSOR_2_PIN_A, SENSOR_2_PIN_B, SENSOR_2_PIN_IND
          +---------+         +---------+         +----- 0
 */
 
-void IRAM_ATTR registerEvent(volatile AngleSensor* sensor, CircularBuffer* cb, bool eventA) {
+void IRAM_ATTR registerEvent(volatile AngleSensor* sensor, bool eventA) {
     int64_t usTiming = esp_timer_get_time();
 
     bool aLevel = gpio_get_level((gpio_num_t) sensor->pinA);
@@ -45,14 +45,19 @@ void IRAM_ATTR registerEvent(volatile AngleSensor* sensor, CircularBuffer* cb, b
 
     if ((eventA && aLevel == bLevel) || (!eventA && aLevel != bLevel)) {
         // Increment counter
-        pushCircularBuffer(cb, usTiming);
+        pushCircularBuffer(sensor->timings, usTiming);
         sensor->counter ++;
     } else {
         // Decrement counter
-        pushCircularBuffer(cb, -usTiming);
+        pushCircularBuffer(sensor->timings, -usTiming);
         sensor->counter --;
     }
-    sensor->position = absMod16(sensor->counter, sensor->maxPosition);
+    
+    if (sensor->quadratureMode) {
+        sensor->position = absMod16(sensor->counter, sensor->maxPosition);
+    } else {
+        sensor->position = absMod16(sensor->counter, sensor->maxPosition * 4) / 4;
+    }
     portEXIT_CRITICAL(&mux);
 }
 
@@ -66,7 +71,7 @@ uint8_t IRAM_ATTR isCwDirection(bool aLevel, bool bLevel, bool eventA) {
     return (eventA && aLevel == bLevel) || (!eventA && aLevel != bLevel);
 }
 
-void IRAM_ATTR registerSmartEvent(volatile AngleSensor* sensor, CircularBuffer* cb, bool eventA) {
+void IRAM_ATTR registerSmartEvent(volatile AngleSensor* sensor, bool eventA) {
     // If controller missed events since last registered state, take into account missing steps.
     int64_t usTiming = esp_timer_get_time();
 
@@ -76,6 +81,7 @@ void IRAM_ATTR registerSmartEvent(volatile AngleSensor* sensor, CircularBuffer* 
     int8_t newState = getState(aLevel, bLevel);
     bool cwDirection = isCwDirection(aLevel, bLevel, eventA);
 
+    portENTER_CRITICAL(&mux);
     // Calculate increment comparing new state with previous state
     int8_t increment;
     if (sensor->previousState == -1) {
@@ -99,12 +105,16 @@ void IRAM_ATTR registerSmartEvent(volatile AngleSensor* sensor, CircularBuffer* 
     // Negative time for CCW move.
     usTiming /= increment;
 
-    portENTER_CRITICAL(&mux);
+    sensor->previousState = newState;
     sensor->eventCount ++;
-    pushCircularBuffer(cb, usTiming);
+    pushCircularBuffer(sensor->timings, usTiming);
     sensor->counter += increment;
     sensor->position = absMod16(sensor->counter, sensor->maxPosition);
-    sensor->previousState = newState;
+    if (sensor->quadratureMode) {
+        sensor->position = absMod16(sensor->counter, sensor->maxPosition);
+    } else {
+        sensor->position = absMod16(sensor->counter, sensor->maxPosition * 4) / 4;
+    }
     portEXIT_CRITICAL(&mux);    
 }
 
@@ -117,11 +127,11 @@ void IRAM_ATTR indexSensor(volatile AngleSensor* sensor) {
 }
 
 void IRAM_ATTR moveSensor1A() {
-    registerSmartEvent(&sensor1, &timings1, true);
+    registerSmartEvent(&sensor1, true);
 }
 
 void IRAM_ATTR moveSensor1B() {
-    registerSmartEvent(&sensor1, &timings1, false);
+    registerSmartEvent(&sensor1, false);
 }
 
 void IRAM_ATTR resetSensor1() {
@@ -129,11 +139,11 @@ void IRAM_ATTR resetSensor1() {
 }
 
 void IRAM_ATTR moveSensor2A() {
-    registerSmartEvent(&sensor2, &timings2, true);
+    registerSmartEvent(&sensor2, true);
 }
 
 void IRAM_ATTR moveSensor2B() {
-    registerSmartEvent(&sensor2, &timings2, false);
+    registerSmartEvent(&sensor2, false);
 }
 
 void IRAM_ATTR resetSensor2() {
