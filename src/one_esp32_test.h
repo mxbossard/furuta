@@ -35,13 +35,15 @@ void setup() {
     delay(2000);
 }
 
+int32_t simulationCount = 0, successCount = 0;
+
 void loop() {
     //simul1.enabled = false;
     //simul2.enabled = false;
 
-    delay(100);
+    delay(10);
 
-    Serial.println("Running simulation ...");
+    //Serial.println("Running simulation ...");
     // testModulo();
 
     // printSimulators();
@@ -130,7 +132,11 @@ void loop() {
 
     if (testFailed) {
         blinkLed();
+    } else {
+        successCount ++;
     }
 
-    Serial.println("Simulation finished.");
+    simulationCount ++;
+
+    Serial.printf("Simulation #%d finished (%d global errors).\n", simulationCount, simulationCount - successCount);
 }
