@@ -18,9 +18,9 @@
 #define SIMUL_2_PIN_B 12
 #define SIMUL_2_PIN_INDEX 13
 
-#include <lib_rotary_encoder_controller.h>
-#include <lib_rotary_encoder_simulator.h>
-#include <lib_simulator_test.h>
+#include "lib_rotary_encoder_controller.h"
+#include "lib_rotary_encoder_simulator.h"
+#include "lib_simulator_test.h"
 
 #define LED_PIN 2
 

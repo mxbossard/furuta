@@ -18,9 +18,9 @@
 //#define LOG_INFO
 //#define LOG_WARN
 
-#include <rotary_encoder_config.h>
-#include <lib_rotary_encoder_controller.h>
-#include <lib_rotary_encoder_controller_spi_slave_2.h>
+#include "rotary_encoder_config.h"
+#include "lib_rotary_encoder_controller.h"
+#include "lib_rotary_encoder_controller_spi_slave_2.h"
 
 void setup() {
     Serial.begin(115200);

@@ -1,8 +1,10 @@
 #ifndef lib_datagram_h
 #define lib_datagram_h
+
 #include <Arduino.h>
-#include <rotary_encoder_config.h>
-#include <lib_utils.h>
+
+#include "rotary_encoder_config.h"
+#include "lib_utils.h"
 
 static const size_t COMMAND_PAYLOAD_SIZE = 4;
 static const size_t DATA_PAYLOAD_SIZE = 48; 

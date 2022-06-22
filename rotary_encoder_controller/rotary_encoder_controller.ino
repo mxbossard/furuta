@@ -5,7 +5,4 @@
 //#include "rotary_encoder_simulator.h"
 
 
-
-
-// Pour Serge
 //#include "rotary_encoder_controller_1_file.h"

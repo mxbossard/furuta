@@ -1,11 +1,11 @@
 #ifndef lib_rotary_encoder_controller_spi_slave_h
 #define lib_rotary_encoder_controller_spi_slave_h
 
-#include <lib_rotary_encoder_controller.h>
+#include "lib_rotary_encoder_controller.h"
 
 #define SOC_SPI_MAXIMUM_BUFFER_SIZE 128
 #define SPI_DMA_DISABLED 1
-#include <ESP32SPISlave.h>
+#include "ESP32SPISlave.h"
 
 static constexpr uint8_t VSPI_SS {SS};  // default: GPIO 5
 ESP32SPISlave slave;

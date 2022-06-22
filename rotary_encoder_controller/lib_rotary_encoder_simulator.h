@@ -3,8 +3,8 @@
 
 #include <Arduino.h>
 
-#include <lib_utils.h>
-#include <lib_model.h>
+#include "lib_utils.h"
+#include "lib_model.h"
 
 AngleSensorSimulator simul1 = {(AngleSensor*) &sensor1, SIMUL_1_PIN_A, SIMUL_1_PIN_B, SIMUL_1_PIN_INDEX, 0, 0, 0, 0, true};
 AngleSensorSimulator simul2 = {(AngleSensor*) &sensor2, SIMUL_2_PIN_A, SIMUL_2_PIN_B, SIMUL_2_PIN_INDEX, 0, 0, 0, 0, true};
