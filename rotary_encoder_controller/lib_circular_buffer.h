@@ -11,8 +11,8 @@ struct CircularBuffer {
     int8_t lastPosition;
 };
 
-size_t sizeCircularBuffer(CircularBuffer b) {
-    return b.size;
+size_t sizeCircularBuffer(CircularBuffer *b) {
+    return b->size;
 }
 
 void IRAM_ATTR pushCircularBuffer(CircularBuffer *b, int64_t data) {
@@ -41,26 +41,26 @@ void initCircularBuffer(CircularBuffer *cb, size_t size) {
     resetCircularBuffer(cb);
 }
 
-int64_t getLastDataCircularBuffer(CircularBuffer cb) {
-    return cb.data[cb.lastPosition];
+int64_t getLastDataCircularBuffer(CircularBuffer *cb) {
+    return cb->data[cb->lastPosition];
 }
 
-void getDataArrayCircularBuffer(CircularBuffer cb, int64_t* buffer, size_t size) {
+void getDataArrayCircularBuffer(CircularBuffer *cb, int64_t *buffer, size_t size) {
     // Copy data array in new buffer: first item is last pushed
     for (size_t k = 0; k < size; k ++) {
-        int16_t index = cb.lastPosition - k;
+        int16_t index = cb->lastPosition - k;
         if (index < 0) {
-            index += cb.size;
+            index += cb->size;
         }
-        buffer[k] = cb.data[index];
+        buffer[k] = cb->data[index];
     }
 }
 
 int64_t* orderedData = (int64_t*) malloc(sizeof(int64_t) * 128);
-int32_t printCircularBuffer(char* buf, CircularBuffer cb, bool newLine = true) {
+int32_t printCircularBuffer(char *buf, CircularBuffer *cb, bool newLine = true) {
     int32_t n = sprintf(buf, "CircularBuffer: ");
-    getDataArrayCircularBuffer(cb, orderedData, cb.size);
-    n += printArray64as32(buf, orderedData, cb.size);
+    getDataArrayCircularBuffer(cb, orderedData, cb->size);
+    n += printArray64as32(buf, orderedData, cb->size);
     if (newLine) {
         n += sprintf(buf, "\n");
     }

@@ -193,8 +193,8 @@ const char* sensorMessage(AngleSensor* sensor, int64_t* speeds, size_t speedSize
 }
 
 int32_t sensorsMessage(char* buf, int64_t now) {
-    getDataArrayCircularBuffer(timings1, timingsBuffer1, timings1.size);
-    getDataArrayCircularBuffer(timings2, timingsBuffer2, timings2.size);
+    getDataArrayCircularBuffer(&timings1, timingsBuffer1, timings1.size);
+    getDataArrayCircularBuffer(&timings2, timingsBuffer2, timings2.size);
     calculateSpeeds(timingsBuffer1, speedsBuffer1, timings1.size, now);
     calculateSpeeds(timingsBuffer2, speedsBuffer2, timings2.size, now);
 
@@ -228,8 +228,8 @@ size_t buildDatagram(uint8_t* buffer, uint8_t marker) {
     // Copy timings and position in a transaction
 
     // Timings
-    getDataArrayCircularBuffer(timings1, timingsBuffer1, timings1.size);
-    getDataArrayCircularBuffer(timings2, timingsBuffer2, timings2.size);
+    getDataArrayCircularBuffer(&timings1, timingsBuffer1, timings1.size);
+    getDataArrayCircularBuffer(&timings2, timingsBuffer2, timings2.size);
 
     uint16_t position1 = sensor1.position;
     uint16_t position2 = sensor2.position;
