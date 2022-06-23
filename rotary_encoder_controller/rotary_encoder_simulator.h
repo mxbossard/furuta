@@ -19,15 +19,15 @@
 #define LOG_INFO
 
 #include <rotary_encoder_config.h>
-#include <lib_rotary_encoder_simulator.h>
+#include <lib_rotary_encoder_simulator_2.h>
 #include <lib_rotary_encoder_controller_spi_master_2.h>
-#include <lib_simulator_test.h>
+#include <lib_simulator_test_2.h>
 #include <lib_datagram.h>
 
 void setup() {
     Serial.begin(115200);
 
-    simulatorSetup();
+    //simulatorSetup();
     spiMasterSetup();
 
     pinMode(LED_PIN, OUTPUT);

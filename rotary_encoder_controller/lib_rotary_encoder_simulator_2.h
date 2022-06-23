@@ -5,6 +5,7 @@
 
 #include "lib_utils.h"
 #include "lib_model.h"
+#include "lib_rotary_encoder_controller_2.h"
 
 void printSimulator(AngleSensorSimulator simulator) {
     delay(1);
@@ -92,8 +93,14 @@ private:
     AngleSensorSimulator simul;
 
 public:
+    
     RotarySensorSimulator(AngleSensor* sensor, uint8_t pinA, uint8_t pinB, uint8_t pinIndex, bool enabled) :
         simul({(AngleSensor*) sensor, pinA, pinB, pinIndex, 0, 0, 0, 0, enabled}) {
+            begin();
+        }
+    
+    RotarySensorSimulator(RotarySensor* rs, uint8_t pinA, uint8_t pinB, uint8_t pinIndex, bool enabled) :
+        simul({rs->getSensor(), pinA, pinB, pinIndex, 0, 0, 0, 0, enabled}) {
             begin();
         }
 

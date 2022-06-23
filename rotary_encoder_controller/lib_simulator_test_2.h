@@ -8,26 +8,25 @@
 #include "lib_datagram.h"
 #include "lib_rotary_encoder_simulator_2.h"
 
-bool assertEventCount(const char* message, RotarySensorSimulator* rss, uint32_t pause = 0) {
+bool assertEventCount(const char* message, RotarySensorSimulator* rss, uint32_t got, uint32_t pause = 0) {
     const AngleSensorSimulator* simulator = rss->getSimulator();
     if (!simulator->enabled) {
         return true;
     }
     //delay(1);
     const AngleSensor* sensor = simulator->sensor;
-    int32_t expected = rss->getSimulator()->eventCount;
-    int32_t result = sensor->eventCount;
-    int32_t drift = abs(expected - result);
+    int32_t expected = (int32_t) rss->getSimulator()->eventCount;
+    int32_t drift = abs(expected - got);
     
     if (drift > 0) {
-        Serial.printf("Bad event count for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor->name, drift, expected, result, message);
+        Serial.printf("Bad event count for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor->name, drift, expected, got, message);
         delay(pause);
     }
 
     return drift == 0;
 }
 
-bool assertCount(const char* message, RotarySensorSimulator* rss, uint32_t pause = 0) {
+bool assertCount(const char* message, RotarySensorSimulator* rss, int32_t got, uint32_t pause = 0) {
     const AngleSensorSimulator* simulator = rss->getSimulator();
     if (!simulator->enabled) {
         return true;
@@ -35,31 +34,29 @@ bool assertCount(const char* message, RotarySensorSimulator* rss, uint32_t pause
     //delay(1);
     const AngleSensor* sensor = simulator->sensor;
     int32_t expected = simulator->counter;
-    int32_t result = sensor->counter;
-    int32_t drift = abs(expected - result);
+    int32_t drift = abs(expected - got);
 
     if (drift > 0) {
-        Serial.printf("Bad count for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor->name, drift, expected, result, message);
+        Serial.printf("Bad count for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor->name, drift, expected, got, message);
         delay(pause);
     }
 
     return drift == 0;
 }
 
-bool assertPosition(const char* message, RotarySensorSimulator* rss, uint32_t pause = 0) {
+bool assertPosition(const char* message, RotarySensorSimulator* rss, uint16_t got, uint32_t pause = 0) {
     const AngleSensorSimulator* simulator = rss->getSimulator();
     if (!simulator->enabled) {
         return true;
     }
     //delay(1);
     const AngleSensor* sensor = simulator->sensor;
-    uint16_t result = sensor->position;
     uint16_t expected = simulator->position;
-    uint16_t drift = abs(expected - result);
+    uint16_t drift = abs(expected - got);
     drift = min(drift, (uint16_t) (sensor->maxPosition - drift));
 
     if (drift > 0) {
-        Serial.printf("Bad position for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor->name, drift, expected, result, message);
+        Serial.printf("Bad position for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor->name, drift, expected, got, message);
         delay(pause);
     }
 
@@ -67,13 +64,20 @@ bool assertPosition(const char* message, RotarySensorSimulator* rss, uint32_t pa
 }
 
 bool assertData(const char* message, RotarySensorSimulator* rss, uint32_t pause = 0) {
+    uint16_t gotPosition = rss->getSimulator()->sensor->position;
+    uint32_t gotCount = rss->getSimulator()->sensor->counter;
+    uint32_t gotEventCount = rss->getSimulator()->sensor->eventCount;
+    return assertData(message, rss, gotPosition, gotCount, gotEventCount, pause);
+}
+
+bool assertData(const char* message, RotarySensorSimulator* rss, uint16_t gotPosition, uint32_t gotCount, uint32_t gotEventCount, uint32_t pause = 0) {
     if (!rss->getSimulator()->enabled) {
         return true;
     }
-    bool test = assertPosition(message, rss, 0);
-    test = assertCount(message, rss, 0) && test;
+    bool test = assertPosition(message, rss, gotPosition, 0);
+    test = assertCount(message, rss, gotCount, 0) && test;
     //test = assertEventCount(message, sensor, simulator, 0) && test;
-    assertEventCount(message, rss, 0); // If event count drifted it not necessarily an error.
+    assertEventCount(message, rss, gotEventCount, 0); // If event count drifted it not necessarily an error.
 
     if (!test) {
         //blinkLed();

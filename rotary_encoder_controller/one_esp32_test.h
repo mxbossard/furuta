@@ -30,11 +30,8 @@ RotarySensor rs2(SENSOR_2_PIN_A, SENSOR_2_PIN_B, SENSOR_2_PIN_INDEX, false, 1000
 AngleSensor* sensor1 = rs1.getSensor();
 AngleSensor* sensor2 = rs2.getSensor();
 
-RotarySensorSimulator rss1(sensor1, SIMUL_1_PIN_A, SIMUL_1_PIN_B, SIMUL_1_PIN_INDEX, true);
-RotarySensorSimulator rss2(sensor2, SIMUL_2_PIN_A, SIMUL_2_PIN_B, SIMUL_2_PIN_INDEX, true);
-
-AngleSensorSimulator* simul1 = rss1.getSimulator();
-AngleSensorSimulator* simul2 = rss2.getSimulator();
+RotarySensorSimulator rss1(&rs1, SIMUL_1_PIN_A, SIMUL_1_PIN_B, SIMUL_1_PIN_INDEX, true);
+RotarySensorSimulator rss2(&rs2, SIMUL_2_PIN_A, SIMUL_2_PIN_B, SIMUL_2_PIN_INDEX, true);
 
 void IRAM_ATTR sensor1EventA() {
     rs1.eventA();
@@ -170,9 +167,9 @@ void loop() {
     //assertPosition("Turning 50 round left", sensor2, simul2);
 
     // Reset index
-    indexSimul(simul1, periodInUs);
+    rss1.index(periodInUs);
     testFailed |= !assertData("Reseting index", &rss1);
-    indexSimul(simul2, periodInUs);
+    rss2.index(periodInUs);
     testFailed |= !assertData("Reseting index", &rss2);
 
     // Turn 20 round the other side

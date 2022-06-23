@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 
+#include "lib_circular_buffer.h"
+
 struct AngleSensor {
     const char* name;
     const uint8_t pinA;
