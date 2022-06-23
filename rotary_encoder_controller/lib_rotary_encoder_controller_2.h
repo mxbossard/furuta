@@ -7,7 +7,7 @@
 #include "lib_utils.h"
 #include "lib_circular_buffer.h"
 #include "lib_model.h"
-#include "lib_datagram.h"
+// #include "lib_datagram.h"
 
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
@@ -155,6 +155,24 @@ private:
     int64_t* timingsBuffer;
     int64_t* speedsBuffer;
 
+    void calculateSpeeds(int64_t now) {
+        for (size_t k = speedsCount - 1 ; k > 0 ; k --) {
+            // Calculate instantaneous speed between timings
+            if (timingsBuffer[k] > 0) {
+                speedsBuffer[k] = abs(timingsBuffer[k - 1]) - timingsBuffer[k];
+            } else {
+                speedsBuffer[k] = - abs(timingsBuffer[k - 1]) - timingsBuffer[k];
+            }
+        }
+
+        // Last speed is calculated with current time
+        if (timingsBuffer[0] >= 0) {
+            speedsBuffer[0] = now - timingsBuffer[0];
+        } else {
+            speedsBuffer[0] = - now - timingsBuffer[0];
+        }
+    }
+
 public:
     // Constructor
     RotarySensor(uint8_t pinA, uint8_t pinB, uint8_t pinIndex, bool quadratureMode, uint16_t points, uint8_t speedsCount, char* name) :
@@ -184,27 +202,60 @@ public:
         indexSensor(&sensor);
     }
 
-    void calculateSpeeds(int64_t now) {
-        getDataArrayCircularBuffer((CircularBuffer*) &timings, timingsBuffer, speedsCount);
-        for (size_t k = speedsCount - 1 ; k > 0 ; k --) {
-            // Calculate instantaneous speed between timings
-            if (timingsBuffer[k] > 0) {
-                speedsBuffer[k] = abs(timingsBuffer[k - 1]) - timingsBuffer[k];
-            } else {
-                speedsBuffer[k] = - abs(timingsBuffer[k - 1]) - timingsBuffer[k];
-            }
-        }
-
-        // Last speed is calculated with current time
-        if (timingsBuffer[0] >= 0) {
-            speedsBuffer[0] = now - timingsBuffer[0];
-        } else {
-            speedsBuffer[0] = - now - timingsBuffer[0];
-        }
-    }
-
     AngleSensor* getSensor() {
         return (AngleSensor*) &sensor;
+    }
+
+    /**
+     * Build data payload at position p in buffer.
+     */
+    size_t buildPayload(uint8_t* buffer, size_t p, int64_t now) {
+        // Sensor Payload :
+        // sensor position on 2 bytes
+        // Each speed on 2 bytes
+
+        portENTER_CRITICAL(&mux);
+        uint16_t position = sensor.position;
+        getDataArrayCircularBuffer((CircularBuffer*) &timings, timingsBuffer, speedsCount);
+        portEXIT_CRITICAL(&mux);
+
+        #ifdef LOG_DEBUG
+        int64_t endTransaction = esp_timer_get_time();
+        #endif
+
+        calculateSpeeds(now);
+
+        #ifdef LOG_DEBUG
+        int64_t endSpeedsCalculation = esp_timer_get_time();
+        #endif
+
+        // Position 1
+        buffer[p] = position >> 8;
+        buffer[p+1] = position;
+        p += 2;
+        
+        // Speeds
+        for (size_t k = 0; k < speedsCount; k++) {
+            // Limit speed to int16_t format
+            int16_t limitedSpeed = int64toInt16(speedsBuffer[k]);
+            buffer[p] = limitedSpeed >> 8;
+            buffer[p+1] = limitedSpeed;
+            //Serial.printf("int32: 0x%08X (%d) ; int16: %d ; int16: 0x%02X%02X\n", speeds[k], speeds[k], speed, buffer[p], buffer[p+1]);
+            p += 2;
+        }
+
+
+        #ifdef LOG_DEBUG
+        uint32_t transactionTime = (uint32_t) (endTransaction - now);
+        uint32_t speedsCalculationTime = (uint32_t) (endSpeedsCalculation - endTransaction);
+        Serial.printf("[Timings] transaction: %dµs ; speeds calc: %dµs\n", transactionTime, speedsCalculationTime);
+
+        //printSensors(now);
+        printTimings(timingsBuffer, timings1.size);
+        printSpeeds(speedsBuffer, timings1.size);
+        #endif
+        
+        return p;
     }
 
 };

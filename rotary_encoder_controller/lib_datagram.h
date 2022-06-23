@@ -6,6 +6,8 @@
 #include "rotary_encoder_config.h"
 #include "lib_utils.h"
 
+#include "lib_rotary_encoder_controller_2.h"
+
 static const size_t COMMAND_PAYLOAD_SIZE = 4;
 static const size_t DATA_PAYLOAD_SIZE = 48; 
 
@@ -13,8 +15,8 @@ void crcCommandPayload(uint8_t* buffer) {
     markCrc16(buffer, COMMAND_PAYLOAD_SIZE);
 }
 
-void crcDataPayload(uint8_t* buffer) {
-    markCrc16(buffer, DATA_PAYLOAD_SIZE);
+void crcDataPayload(uint8_t* buffer, size_t payloadLength) {
+    markCrc16(buffer, payloadLength);
 }
 
 bool isCommandPayloadCrcValid(uint8_t* buffer) {
@@ -193,17 +195,18 @@ void printDataPayload(uint8_t* buffer, size_t speedsCount) {
 }
 
 uint8_t datagramCounter = 0;
-size_t buildDataPayload(uint8_t* buffer, uint8_t marker, int64_t now, uint16_t position1, int64_t* speedsBuffer1, size_t speeds1Count, uint16_t position2, int64_t* speedsBuffer2, size_t speeds2Count) {
-    #ifdef LOG_DEBUG
-    int64_t startDatagramBuild = esp_timer_get_time();
-    #endif
+size_t buildFullPayload(uint8_t* buffer, uint8_t marker, int64_t now, RotarySensor* sensor1, RotarySensor* sensor2) {
+    int64_t startPayloadBuild = esp_timer_get_time();
 
     // Sensor Datagram :
     // CRC16 on 2 bytes
     // Marker on 1 byte
-    // Extra header on 1 byte (Parity, Speed counts, redondancy, ...)
-    // sensor position on 2 bytes
-    // Each speed on 2 bytes
+    // Extra header on 1 byte (Parity, Speed counts, redundancy, ...)
+    // sensor1 payload
+    // sensor2 payload
+    // ...
+    // sensorN payload
+    // time to build
 
     size_t p = 0;
 
@@ -218,46 +221,31 @@ size_t buildDataPayload(uint8_t* buffer, uint8_t marker, int64_t now, uint16_t p
     buffer[p] = datagramCounter & 0x0F; // 4 bits counter
     p += 1;
 
-    // Position 1
-    buffer[p] = position1 >> 8;
-    buffer[p+1] = position1;
-    p += 2;
+    // Sensor 1
+    p = sensor1->buildPayload(buffer, p, now);
 
-    // Position 2
-    buffer[p] = position2 >> 8;
-    buffer[p+1] = position2;
-    p += 2;
-
-    // Speeds 1
-    for (size_t k = 0; k < speeds1Count; k++) {
-        // Limit speed to int16_t format
-        int16_t limitedSpeed = int64toInt16(speedsBuffer1[k]);
-        buffer[p] = limitedSpeed >> 8;
-        buffer[p+1] = limitedSpeed;
-        //Serial.printf("int32: 0x%08X (%d) ; int16: %d ; int16: 0x%02X%02X\n", speeds[k], speeds[k], speed, buffer[p], buffer[p+1]);
-        p += 2;
-    }
-
-    // Speeds 2
-    for (size_t k = 0; k < speeds2Count; k++) {
-        // Limit speed to int16_t format
-        int16_t limitedSpeed = int64toInt16(speedsBuffer2[k]);
-        buffer[p] = limitedSpeed >> 8;
-        buffer[p+1] = limitedSpeed;
-        //Serial.printf("int32: 0x%08X (%d) ; int16: %d ; int16: 0x%02X%02X\n", speeds[k], speeds[k], speed, buffer[p], buffer[p+1]);
-        p += 2;
-    }
+    // Sensor 2
+    p = sensor2->buildPayload(buffer, p, now);
 
     #ifdef LOG_DEBUG
     int64_t endDatagramBuild = esp_timer_get_time();
     #endif
 
     // CRC16 at first position
-    crcDataPayload(buffer);
+    crcDataPayload(buffer, p);
 
     #ifdef LOG_DEBUG
     int64_t endCrcBuild = esp_timer_get_time();
     #endif
+
+    // Add elapsed time in payload
+    int64_t endPayloadBuild = esp_timer_get_time();
+
+    int64_t buildTime64 = (endPayloadBuild - startPayloadBuild) / 10;
+    uint16_t shortenTime = int64toInt16(buildTime64);
+    buffer[p] = shortenTime >> 8;
+    buffer[p+1] = shortenTime;
+    p += 2;
 
     #ifdef LOG_DEBUG
     uint32_t datagramBuildTime = (uint32_t) (endDatagramBuild - startDatagramBuild);
@@ -287,5 +275,7 @@ bool isMarkerValid(uint8_t* buffer, uint8_t expectedMarker) {
     //Serial.printf("MARKER IS VALID\n");
     return true;
 }
+
+
 
 #endif

@@ -27,9 +27,6 @@
 RotarySensor rs1(SENSOR_1_PIN_A, SENSOR_1_PIN_B, SENSOR_1_PIN_INDEX, false, 4000, 10, (char*)"sensor1");
 RotarySensor rs2(SENSOR_2_PIN_A, SENSOR_2_PIN_B, SENSOR_2_PIN_INDEX, false, 1000, 10, (char*)"sensor2");
 
-AngleSensor* sensor1 = rs1.getSensor();
-AngleSensor* sensor2 = rs2.getSensor();
-
 RotarySensorSimulator rss1(&rs1, SIMUL_1_PIN_A, SIMUL_1_PIN_B, SIMUL_1_PIN_INDEX, true);
 RotarySensorSimulator rss2(&rs2, SIMUL_2_PIN_A, SIMUL_2_PIN_B, SIMUL_2_PIN_INDEX, true);
 
@@ -153,13 +150,13 @@ void loop() {
     testFailed = testFailed || !assertData("Turning 1001 steps left", &rss2);
    
     // Turn 1 round one side
-    moveBothSimulators(&rss1, true, sensor1->maxPosition + 3, &rss2, false, sensor2->maxPosition - 5, periodInUs);
+    moveBothSimulators(&rss1, true, rs1.getSensor()->maxPosition + 3, &rss2, false, rs2.getSensor()->maxPosition - 5, periodInUs);
     testFailed = testFailed || !assertData("Turning 1 round + 3 steps right", &rss1);
     testFailed = testFailed || !assertData("Turning 1 round - 5 steps right", &rss2);
     // printSimulators();
     // printSensors();
 
-    testFailed |= !testPendulumWithAssertion(&rss1, sensor1->maxPosition/2, &rss2, sensor2->maxPosition/2, 12, periodInUs);
+    testFailed |= !testPendulumWithAssertion(&rss1, rs1.getSensor()->maxPosition/2, &rss2, rs2.getSensor()->maxPosition/2, 12, periodInUs);
 
     // Turn 50 round one side
     //moveBothSimulators(true, sensor1.maxPosition * 50, false, sensor2.maxPosition * 50, periodInUs);
@@ -173,7 +170,7 @@ void loop() {
     testFailed |= !assertData("Reseting index", &rss2);
 
     // Turn 20 round the other side
-    moveBothSimulators(&rss1, false, sensor1->maxPosition * 10 + 42, &rss2, true, sensor2->maxPosition * 10 + 21, periodInUs);
+    moveBothSimulators(&rss1, false, rs1.getSensor()->maxPosition * 10 + 42, &rss2, true, rs2.getSensor()->maxPosition * 10 + 21, periodInUs);
     testFailed |= !assertData("Turning 10 round + 42 steps left", &rss1);
     testFailed |= !assertData("Turning 10 round + 21 steps right", &rss2);
 

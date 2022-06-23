@@ -48,8 +48,8 @@ void loop() {
     uint32_t periodInUs = 40;
     uint32_t failedTestPause = 0;
 
-    indexSimul(&simul1, periodInUs);
-    indexSimul(&simul2, periodInUs);
+    rs1.index(periodInUs);
+    rs2.index(periodInUs);
     assertSpiPayload("Indexing sensors", failedTestPause);
 
     moveBothSimulators(true, 0, false, 1, periodInUs);

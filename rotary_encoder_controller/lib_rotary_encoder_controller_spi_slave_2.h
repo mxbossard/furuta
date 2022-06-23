@@ -1,11 +1,12 @@
 #ifndef lib_rotary_encoder_controller_spi_slave_h
 #define lib_rotary_encoder_controller_spi_slave_h
 
-#include "lib_rotary_encoder_controller.h"
-
 #define SOC_SPI_MAXIMUM_BUFFER_SIZE 128
 #define SPI_DMA_DISABLED 1
 #include "ESP32SPISlave.h"
+
+#include "lib_rotary_encoder_controller_2.h"
+#include "lib_datagram.h"
 
 static constexpr uint8_t VSPI_SS {SS};  // default: GPIO 5
 ESP32SPISlave slave;
@@ -41,7 +42,7 @@ void spiSlaveSetup() {
     slave.queue(spi_slave_rx_buf, spi_slave_tx_buf, BUFFER_SIZE);
 }
 
-void spiSlaveProcess() {
+void spiSlaveProcess(RotarySensor* sensor1, RotarySensor* sensor2) {
     // if transaction has completed from master,
     // available() returns size of results of transaction,
     // and buffer is automatically updated
@@ -65,19 +66,7 @@ void spiSlaveProcess() {
                     int64_t startTime = esp_timer_get_time();
 
                     // Master asked for a Timing
-                    size_t pos = buildDatagram(spi_slave_tx_buf, receivedMarker);
-
-                    // Add elapsed time in payload
-                    int64_t endTime = esp_timer_get_time();
-
-                    int64_t buildTime64 = (endTime - startTime) / 10;
-                    uint16_t shortenTime = int64toInt16(buildTime64);
-                    spi_slave_tx_buf[pos] = shortenTime >> 8;
-                    spi_slave_tx_buf[pos+1] = shortenTime;
-
-                    uint32_t buildTime32 = ((uint32_t) buildTime64) * 10;
-                    //Serial.printf("Built Payload marked #%d in %d µs.\n", receivedMarker, buildTime32);
-
+                    buildFullPayload(spi_slave_tx_buf, receivedMarker, startTime, sensor1, sensor2);
                 } else if (receivedCommand == COMMAND_READ) {
                     // Master asked for a READ
                 } else {

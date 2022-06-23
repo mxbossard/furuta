@@ -63,14 +63,7 @@ bool assertPosition(const char* message, RotarySensorSimulator* rss, uint16_t go
     return drift == 0;
 }
 
-bool assertData(const char* message, RotarySensorSimulator* rss, uint32_t pause = 0) {
-    uint16_t gotPosition = rss->getSimulator()->sensor->position;
-    uint32_t gotCount = rss->getSimulator()->sensor->counter;
-    uint32_t gotEventCount = rss->getSimulator()->sensor->eventCount;
-    return assertData(message, rss, gotPosition, gotCount, gotEventCount, pause);
-}
-
-bool assertData(const char* message, RotarySensorSimulator* rss, uint16_t gotPosition, uint32_t gotCount, uint32_t gotEventCount, uint32_t pause = 0) {
+bool assertData(const char* message, RotarySensorSimulator* rss, uint16_t gotPosition, int32_t gotCount, uint32_t gotEventCount, uint32_t pause = 0) {
     if (!rss->getSimulator()->enabled) {
         return true;
     }
@@ -85,6 +78,13 @@ bool assertData(const char* message, RotarySensorSimulator* rss, uint16_t gotPos
     }
 
     return test;
+}
+
+bool assertData(const char* message, RotarySensorSimulator* rss, uint32_t pause = 0) {
+    uint16_t gotPosition = rss->getSimulator()->sensor->position;
+    int32_t gotCount = rss->getSimulator()->sensor->counter;
+    uint32_t gotEventCount = rss->getSimulator()->sensor->eventCount;
+    return assertData(message, rss, gotPosition, gotCount, gotEventCount, pause);
 }
 
 void testModulo() {
