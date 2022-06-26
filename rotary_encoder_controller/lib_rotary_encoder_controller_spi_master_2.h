@@ -70,7 +70,7 @@ bool sendSpiReadCommand() {
 }
 
 bool spiMasterProcess() {
-    //delay(10);
+    delayMicroseconds(100);
 
     sendSpiTimingCommand();
 

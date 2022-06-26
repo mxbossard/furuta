@@ -77,7 +77,8 @@ uint16_t getPosition1(uint8_t* payload) {
 }
 
 uint16_t getPosition2(uint8_t* payload) {
-    uint16_t position2 = (((uint16_t)payload[6]) << 8) + payload[7];
+    uint8_t offset = 2+ 2 * SPEEDS_COUNT_TO_KEEP;
+    uint16_t position2 = (((uint16_t)payload[4 + offset]) << 8) + payload[5 + offset];
     return position2;
 }
 
@@ -202,8 +203,8 @@ size_t buildFullPayload(uint8_t* buffer, uint8_t marker, int64_t now, RotarySens
     // CRC16 on 2 bytes
     // Marker on 1 byte
     // Extra header on 1 byte (Parity, Speed counts, redundancy, ...)
-    // sensor1 payload
-    // sensor2 payload
+    // sensor1 payload (2 + 2 * speeds count bytes)
+    // sensor2 payload (2 + 2 * speeds count bytes)
     // ...
     // sensorN payload
     // time to build
