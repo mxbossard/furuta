@@ -12,7 +12,7 @@ bool assertSpiPayload(const char* message, RotarySensorSimulator* rss1, RotarySe
     if (valid) {
         //printDataPayload(spi_master_rx_buf, SPEEDS_COUNT_TO_KEEP);
     } else {
-        blinkLed();
+        libutils::blinkLed();
         Serial.printf("Invalid payload received for test: \"%s\" !\n", message);
         printDataPayload(spi_master_rx_buf, SPEEDS_COUNT_TO_KEEP);
         return false;

@@ -7,85 +7,83 @@
 #include "lib_model.h"
 #include "lib_rotary_encoder_controller_2.h"
 
-void printSimulator(AngleSensorSimulator simulator) {
-    delay(1);
-    Serial.printf("[%s] position: %d\n", simulator.sensor->name, simulator.position);
-}
+namespace rotaryEncoderSimulator {
 
-// 4 states
-void moveSimulator(AngleSensorSimulator* simulator, bool direction, uint32_t step, uint32_t periodInUs) {
-    if (!simulator->enabled) {
-        return;
+    // 4 states
+    void moveSimulator(AngleSensorSimulator* simulator, bool direction, uint32_t step, uint32_t periodInUs) {
+        if (!simulator->enabled) {
+            return;
+        }
+        //Serial.printf("[%s] Moving %d step in direction: %d with period of %d µs\n", simulator.name, step, direction, periodInUs);
+
+        for(uint32_t k = 0; k < step; k++) {
+            simulator->eventCount ++;
+
+            if (direction) {
+                // simulator->position ++;
+                simulator->counter ++;
+                simulator->internalState ++;
+            } else {
+                // simulator->position --;
+                simulator->counter --;
+                simulator->internalState --;
+            }
+
+            if (simulator->sensor->quadratureMode) {
+                simulator->position = libutils::absMod16(simulator->counter, simulator->sensor->maxPosition);
+            } else {
+                simulator->position = libutils::absMod16(simulator->counter, simulator->sensor->maxPosition * 4) / 4;
+            }
+            
+            uint16_t state = libutils::absMod16(simulator->internalState, 4);
+            // Serial.printf("%s simulator new state: %d\n", simulator->name, state);
+            // delay(1000);
+
+            switch(state) {
+                case 0:
+                    gpio_set_level((gpio_num_t) simulator->pinA, LOW);
+                    gpio_set_level((gpio_num_t) simulator->pinB, LOW);
+                    //while(gpio_get_level((gpio_num_t) simulator->pinA) != LOW && (gpio_get_level((gpio_num_t) simulator->pinB) != LOW));
+                    break;
+                case 1:
+                    gpio_set_level((gpio_num_t) simulator->pinA, LOW);
+                    gpio_set_level((gpio_num_t) simulator->pinB, HIGH);
+                    //while(gpio_get_level((gpio_num_t) simulator->pinA) != LOW && (gpio_get_level((gpio_num_t) simulator->pinB) != HIGH));
+                    break;
+                case 2:
+                    gpio_set_level((gpio_num_t) simulator->pinA, HIGH);
+                    gpio_set_level((gpio_num_t) simulator->pinB, HIGH);
+                    //while(gpio_get_level((gpio_num_t) simulator->pinA) != HIGH && (gpio_get_level((gpio_num_t) simulator->pinB) != HIGH));
+                    break;
+                case 3:
+                    gpio_set_level((gpio_num_t) simulator->pinA, HIGH);
+                    gpio_set_level((gpio_num_t) simulator->pinB, LOW);
+                    //while(gpio_get_level((gpio_num_t) simulator->pinA) != HIGH && (gpio_get_level((gpio_num_t) simulator->pinB) != LOW));
+                    break;
+                default:
+                    // should not exists
+                    Serial.printf("Bad simulator state: %d !!!\n", state);
+            }
+            delayMicroseconds(periodInUs);
+
+            //printSensorInputs();
+            //printSimulatorOutputs();
+        }
     }
-    //Serial.printf("[%s] Moving %d step in direction: %d with period of %d µs\n", simulator.name, step, direction, periodInUs);
 
-    for(uint32_t k = 0; k < step; k++) {
-        simulator->eventCount ++;
+    void indexSimul(AngleSensorSimulator* simulator, uint32_t periodInUs) {
+        //Serial.printf("[%s] Reseting index\n", simulator.name);
+        simulator->position = 0;
+        simulator->counter = 0;
+        simulator->eventCount = 0;
 
-        if (direction) {
-            // simulator->position ++;
-            simulator->counter ++;
-            simulator->internalState ++;
-        } else {
-            // simulator->position --;
-            simulator->counter --;
-            simulator->internalState --;
-        }
+        // digitalWrite(simulator.pinA, LOW);
+        // digitalWrite(simulator.pinB, LOW);
 
-        if (simulator->sensor->quadratureMode) {
-            simulator->position = absMod16(simulator->counter, simulator->sensor->maxPosition);
-        } else {
-            simulator->position = absMod16(simulator->counter, simulator->sensor->maxPosition * 4) / 4;
-        }
-        
-        uint16_t state = absMod16(simulator->internalState, 4);
-        // Serial.printf("%s simulator new state: %d\n", simulator->name, state);
-        // delay(1000);
-
-        switch(state) {
-            case 0:
-                gpio_set_level((gpio_num_t) simulator->pinA, LOW);
-                gpio_set_level((gpio_num_t) simulator->pinB, LOW);
-                //while(gpio_get_level((gpio_num_t) simulator->pinA) != LOW && (gpio_get_level((gpio_num_t) simulator->pinB) != LOW));
-                break;
-            case 1:
-                gpio_set_level((gpio_num_t) simulator->pinA, LOW);
-                gpio_set_level((gpio_num_t) simulator->pinB, HIGH);
-                //while(gpio_get_level((gpio_num_t) simulator->pinA) != LOW && (gpio_get_level((gpio_num_t) simulator->pinB) != HIGH));
-                break;
-            case 2:
-                gpio_set_level((gpio_num_t) simulator->pinA, HIGH);
-                gpio_set_level((gpio_num_t) simulator->pinB, HIGH);
-                //while(gpio_get_level((gpio_num_t) simulator->pinA) != HIGH && (gpio_get_level((gpio_num_t) simulator->pinB) != HIGH));
-                break;
-            case 3:
-                gpio_set_level((gpio_num_t) simulator->pinA, HIGH);
-                gpio_set_level((gpio_num_t) simulator->pinB, LOW);
-                //while(gpio_get_level((gpio_num_t) simulator->pinA) != HIGH && (gpio_get_level((gpio_num_t) simulator->pinB) != LOW));
-                break;
-            default:
-                // should not exists
-                Serial.printf("Bad simulator state: %d !!!\n", state);
-        }
+        digitalWrite(simulator->pinIndex, HIGH);
         delayMicroseconds(periodInUs);
-
-        //printSensorInputs();
-        //printSimulatorOutputs();
-   }
-}
-
-void indexSimul(AngleSensorSimulator* simulator, uint32_t periodInUs) {
-    //Serial.printf("[%s] Reseting index\n", simulator.name);
-    simulator->position = 0;
-    simulator->counter = 0;
-    simulator->eventCount = 0;
-
-    // digitalWrite(simulator.pinA, LOW);
-    // digitalWrite(simulator.pinB, LOW);
-
-    digitalWrite(simulator->pinIndex, HIGH);
-    delayMicroseconds(periodInUs);
-    digitalWrite(simulator->pinIndex, LOW);
+        digitalWrite(simulator->pinIndex, LOW);
+    }
 }
 
 class RotarySensorSimulator {
@@ -114,11 +112,11 @@ public:
     }
 
     void index(uint32_t periodInUs) {
-        indexSimul(&simul, periodInUs);
+        rotaryEncoderSimulator::indexSimul(&simul, periodInUs);
     }
 
     void move(bool direction, uint32_t step, uint32_t periodInUs) {
-        moveSimulator(&simul, direction, step, periodInUs);
+        rotaryEncoderSimulator::moveSimulator(&simul, direction, step, periodInUs);
     }
 
     AngleSensorSimulator* getSimulator() {

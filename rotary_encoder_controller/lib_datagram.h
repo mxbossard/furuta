@@ -5,6 +5,7 @@
 
 #include "rotary_encoder_config.h"
 #include "lib_utils.h"
+#include "lib_crc.h"
 
 #include "lib_rotary_encoder_controller_2.h"
 
@@ -12,19 +13,19 @@ static const size_t COMMAND_PAYLOAD_SIZE = 4;
 static const size_t DATA_PAYLOAD_SIZE = 48; 
 
 void crcCommandPayload(uint8_t* buffer) {
-    markCrc16(buffer, COMMAND_PAYLOAD_SIZE);
+    libcrc::markCrc16(buffer, COMMAND_PAYLOAD_SIZE);
 }
 
 void crcDataPayload(uint8_t* buffer, size_t payloadLength) {
-    markCrc16(buffer, payloadLength);
+    libcrc::markCrc16(buffer, payloadLength);
 }
 
 bool isCommandPayloadCrcValid(uint8_t* buffer) {
-    return checkCrc16(buffer, COMMAND_PAYLOAD_SIZE);
+    return libcrc::checkCrc16(buffer, COMMAND_PAYLOAD_SIZE);
 }
 
 bool isDataPayloadCrcValid(uint8_t* buffer) {
-    return checkCrc16(buffer, DATA_PAYLOAD_SIZE);
+    return libcrc::checkCrc16(buffer, DATA_PAYLOAD_SIZE);
 }
 
 void printFullPayload(uint8_t* buffer, size_t size) {
@@ -119,7 +120,7 @@ uint8_t* getRedundantCommandPayload(uint8_t* buffer, uint8_t redundancy) {
 uint8_t* commandFounds = (uint8_t*) malloc(sizeof(uint8_t) * 16);
 uint8_t getRedundantCommandPayload2(uint8_t* buffer, uint8_t redundancy) {
     uint8_t commandFoundCount = 0;
-    initArray8(commandFounds, redundancy);
+    libutils::initArray8(commandFounds, redundancy);
     // Get commant byte of first redundant command with a valid CRC.
     for (uint8_t k = 0; k < redundancy; k++) {
         uint8_t* commandBuffer = &buffer[k * COMMAND_PAYLOAD_SIZE];
@@ -243,7 +244,7 @@ size_t buildFullPayload(uint8_t* buffer, uint8_t marker, int64_t now, RotarySens
     int64_t endPayloadBuild = esp_timer_get_time();
 
     int64_t buildTime64 = (endPayloadBuild - startPayloadBuild) / 10;
-    uint16_t shortenTime = int64toInt16(buildTime64);
+    uint16_t shortenTime = libutils::int64toInt16(buildTime64);
     buffer[p] = shortenTime >> 8;
     buffer[p+1] = shortenTime;
     p += 2;

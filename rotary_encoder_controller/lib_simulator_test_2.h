@@ -90,23 +90,23 @@ bool assertData(const char* message, RotarySensorSimulator* rss, uint32_t pause 
 void testModulo() {
     int16_t a = -1;
     uint16_t b = 4000;
-    uint16_t c = absMod16(a, b);
+    uint16_t c = libutils::absMod16(a, b);
     Serial.printf("%d absMod16 %d = %d\n", a, b, c);
 
     a = -1;
-    c = absMod16(a, b);
+    c = libutils::absMod16(a, b);
     Serial.printf("%d absMod16 %d = %d\n", a, b, c);
 
     a = -4001;
-    c = absMod16(a, b);
+    c = libutils::absMod16(a, b);
     Serial.printf("%d absMod16 %d = %d\n", a, b, c);
 
     a = 4000;
-    c = absMod16(a, b);
+    c = libutils::absMod16(a, b);
     Serial.printf("%d absMod16 %d = %d\n", a, b, c);
 
     a = 4001;
-    c = absMod16(a, b);
+    c = libutils::absMod16(a, b);
     Serial.printf("%d absMod16 %d = %d\n", a, b, c);
 }
 
