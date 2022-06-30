@@ -29,12 +29,19 @@ void testXmodemCrc16(void) {
   TEST_ASSERT_EQUAL(expected, libcrc::xmodemCrc16(message, 4));
 }
 
+void testXmodemCrc16_2(void) {
+  uint8_t message[4] = {0x0C, 0x05};
+  uint16_t expected = 0x15C8;
+  TEST_ASSERT_EQUAL(expected, libcrc::xmodemCrc16(message, 2));
+}
+
 void setup() {
   UNITY_BEGIN();
 
   RUN_TEST(testCrc8);
   RUN_TEST(testXmodemCrc16);
   RUN_TEST(testSlowXmodemCrc16);
+  RUN_TEST(testXmodemCrc16_2);
 
   UNITY_END();
 }

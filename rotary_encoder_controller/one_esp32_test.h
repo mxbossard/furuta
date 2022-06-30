@@ -1,14 +1,24 @@
 //#include <Arduino.h>
 
-#define LED_PIN 2
+#ifndef SENSOR_1_PIN_A
+#define SENSOR_1_PIN_A (gpio_num_t) 36
+#endif
+#ifndef SENSOR_1_PIN_B
+#define SENSOR_1_PIN_B (gpio_num_t) 37
+#endif
+#ifndef SENSOR_1_PIN_INDEX
+#define SENSOR_1_PIN_INDEX (gpio_num_t) 38
+#endif
 
-#define SENSOR_1_PIN_A 36
-#define SENSOR_1_PIN_B 37
-#define SENSOR_1_PIN_INDEX 38
-
-#define SENSOR_2_PIN_A 39
-#define SENSOR_2_PIN_B 34
-#define SENSOR_2_PIN_INDEX 35
+#ifndef SENSOR_2_PIN_A
+#define SENSOR_2_PIN_A (gpio_num_t) 39
+#endif
+#ifndef SENSOR_2_PIN_B
+#define SENSOR_2_PIN_B (gpio_num_t) 34
+#endif
+#ifndef SENSOR_2_PIN_INDEX
+#define SENSOR_2_PIN_INDEX (gpio_num_t) 35
+#endif
 
 #define SIMUL_1_PIN_A 25
 #define SIMUL_1_PIN_B 26
@@ -18,7 +28,9 @@
 #define SIMUL_2_PIN_B 12
 #define SIMUL_2_PIN_INDEX 13
 
-#define LED_PIN 2
+#ifndef LED_PIN
+#define LED_PIN (gpio_num_t) 2
+#endif
 
 #include "lib_rotary_encoder_controller_2.h"
 #include "lib_simulator_test_2.h"
@@ -93,7 +105,7 @@ void loop() {
     // printSimulators();
     // printSensors();
 
-    uint32_t periodInUs = 1;
+    uint32_t periodInUs = 50;
 
     bool testFailed = false;
 
@@ -175,7 +187,7 @@ void loop() {
     testFailed |= !assertData("Turning 10 round + 21 steps right", &rss2);
 
     if (testFailed) {
-        blinkLed();
+        libutils::blinkLed();
     } else {
         successCount ++;
     }

@@ -1,8 +1,14 @@
 #ifndef lib_rotary_encoder_controller_spi_slave_h
 #define lib_rotary_encoder_controller_spi_slave_h
 
+#ifndef SOC_SPI_MAXIMUM_BUFFER_SIZE
 #define SOC_SPI_MAXIMUM_BUFFER_SIZE 128
+#endif
+
+#ifndef SPI_DMA_DISABLED
 #define SPI_DMA_DISABLED 1
+#endif
+
 #include "ESP32SPISlave.h"
 
 #include "lib_rotary_encoder_controller_2.h"
@@ -70,11 +76,11 @@ void spiSlaveProcess(RotarySensor* sensor1, RotarySensor* sensor2) {
                 } else if (receivedCommand == COMMAND_READ) {
                     // Master asked for a READ
                 } else {
-                    blinkLed();
+                    libutils::blinkLed();
                 }
 
             } else {
-                blinkLed();
+                libutils::blinkLed();
             }
 
         } else {
@@ -82,7 +88,7 @@ void spiSlaveProcess(RotarySensor* sensor1, RotarySensor* sensor2) {
             #ifdef LOG_WARN
             Serial.printf("No valid payload found !\n");
             #endif
-            blinkLed();
+            libutils::blinkLed();
         }
 
         slave.pop();

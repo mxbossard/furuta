@@ -1,19 +1,41 @@
 #include <Arduino.h>
 
+#ifndef SPI_MISO
 #define SPI_MISO (gpio_num_t) 19
+#endif
+#ifndef SPI_MOSI
 #define SPI_MOSI (gpio_num_t) 23
+#endif
+#ifndef SPI_CLK
 #define SPI_CLK (gpio_num_t) 18
+#endif
+#ifndef SPI_CS
 #define SPI_CS   (gpio_num_t) 5
+#endif
 
+#ifndef SENSOR_1_PIN_A
 #define SENSOR_1_PIN_A (gpio_num_t) 36
+#endif
+#ifndef SENSOR_1_PIN_B
 #define SENSOR_1_PIN_B (gpio_num_t) 39
+#endif
+#ifndef SENSOR_1_PIN_INDEX
 #define SENSOR_1_PIN_INDEX (gpio_num_t) 34
+#endif
 
+#ifndef SENSOR_2_PIN_A
 #define SENSOR_2_PIN_A (gpio_num_t) 25
+#endif
+#ifndef SENSOR_2_PIN_B
 #define SENSOR_2_PIN_B (gpio_num_t) 26
+#endif
+#ifndef SENSOR_2_PIN_INDEX
 #define SENSOR_2_PIN_INDEX (gpio_num_t) 27
+#endif
 
+#ifndef LED_PIN
 #define LED_PIN (gpio_num_t) 22
+#endif
 
 //#define LOG_INFO
 //#define LOG_WARN
