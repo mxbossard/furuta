@@ -1,6 +1,8 @@
 #ifndef lib_rotary_encoder_controller_spi_slave_h
 #define lib_rotary_encoder_controller_spi_slave_h
 
+#include <Arduino.h>
+
 #define SOC_SPI_MAXIMUM_BUFFER_SIZE 128
 #define SPI_DMA_DISABLED 1
 #include "ESP32SPISlave.h"
@@ -24,6 +26,12 @@ void set_buffer(uint8_t* buff, const size_t size) {
     memset(buff, 0, size);
 }
 
+volatile bool askedForTiming = false;
+
+void IRAM_ATTR slaveSelect() {
+    askedForTiming = true;
+}
+
 void spiSlaveSetup() {
     set_buffer(spi_slave_tx_buf, BUFFER_SIZE);
     set_buffer(spi_slave_rx_buf, BUFFER_SIZE);
@@ -32,6 +40,8 @@ void spiSlaveSetup() {
     set_buffer(spi_slave_rx_empty, BUFFER_SIZE);
 
     //set_buffer(datagramBuffer, BUFFER_SIZE);
+
+    attachInterrupt(SPI_CS, slaveSelect, FALLING);
 
     slave.setDataMode(SPI_MODE0);
     slave.begin(VSPI, SPI_CLK, SPI_MISO, SPI_MOSI, SPI_CS);
@@ -42,7 +52,23 @@ void spiSlaveSetup() {
     slave.queue(spi_slave_rx_buf, spi_slave_tx_buf, BUFFER_SIZE);
 }
 
+void commandTiming(uint8_t marker, RotarySensor* sensor1, RotarySensor* sensor2) {
+    int64_t startTime = esp_timer_get_time();
+
+    // Master asked for a Timing
+    buildFullPayload(spi_slave_tx_buf, marker, startTime, sensor1, sensor2);
+}
+
+uint8_t receivedMarker;
+
 void spiSlaveProcess(RotarySensor* sensor1, RotarySensor* sensor2) {
+
+    if (askedForTiming) {
+        // If received slave select interruption
+        commandTiming(receivedMarker, sensor1, sensor2);
+        askedForTiming = false;
+    }
+
     // if transaction has completed from master,
     // available() returns size of results of transaction,
     // and buffer is automatically updated
@@ -60,21 +86,22 @@ void spiSlaveProcess(RotarySensor* sensor1, RotarySensor* sensor2) {
             if (receivedCommand > 0) {
                 //printCommandPayload(spi_slave_rx_buf);
 
-                uint8_t receivedMarker = getMarker(receivedCommandPayload);
+                receivedMarker = getMarker(receivedCommandPayload);
 
                 if (receivedCommand == COMMAND_TIMING) {
-                    int64_t startTime = esp_timer_get_time();
+                    //commandTiming(receivedMarker, sensor1, sensor2);
+                    //int64_t startTime = esp_timer_get_time();
 
                     // Master asked for a Timing
-                    buildFullPayload(spi_slave_tx_buf, receivedMarker, startTime, sensor1, sensor2);
+                    //buildFullPayload(spi_slave_tx_buf, receivedMarker, startTime, sensor1, sensor2);
                 } else if (receivedCommand == COMMAND_READ) {
                     // Master asked for a READ
                 } else {
-                    blinkLed();
+                    libutils::blinkLed();
                 }
 
             } else {
-                blinkLed();
+                libutils::blinkLed();
             }
 
         } else {
@@ -82,7 +109,7 @@ void spiSlaveProcess(RotarySensor* sensor1, RotarySensor* sensor2) {
             #ifdef LOG_WARN
             Serial.printf("No valid payload found !\n");
             #endif
-            blinkLed();
+            libutils::blinkLed();
         }
 
         slave.pop();

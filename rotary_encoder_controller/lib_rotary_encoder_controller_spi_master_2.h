@@ -7,7 +7,6 @@
 #include <lib_utils.h>
 #include <lib_datagram.h>
 
-static constexpr uint8_t VSPI_SS {5};  // default: GPIO 5
 SPIClass master(VSPI);
 
 static const uint32_t BUFFER_SIZE {SPI_WORD_SIZE};
@@ -24,18 +23,18 @@ void spiMasterSetup() {
 
     // SPI Master
     // VSPI = CS: 5, CLK: 18, MOSI: 23, MISO: 19
-    pinMode(VSPI_SS, OUTPUT);
+    pinMode(SPI_CS, OUTPUT);
     pinMode(SPI_CLK, OUTPUT);
-    digitalWrite(VSPI_SS, HIGH);
+    digitalWrite(SPI_CS, HIGH);
     master.begin(SPI_CLK, SPI_MISO, SPI_MOSI, SPI_CS);
 }
 
 void sendSpiTransaction(uint8_t* txBuffer, uint8_t* rxBuffer, size_t length) {
     // start master transaction
     master.beginTransaction(SPISettings(SPI_FREQUENCY, MSBFIRST, SPI_MODE2));
-    digitalWrite(VSPI_SS, LOW);
+    digitalWrite(SPI_CS, LOW);
     master.transferBytes(txBuffer, rxBuffer, length);
-    digitalWrite(VSPI_SS, HIGH);
+    digitalWrite(SPI_CS, HIGH);
     master.endTransaction();
 }
 
@@ -66,13 +65,15 @@ bool sendSpiReadCommand() {
     //printFullPayload(spi_master_rx_buf, BUFFER_SIZE);
 
     // Check CRC and marker
-    return isDataPayloadCrcValid(spi_master_rx_buf) && isMarkerValid(spi_master_rx_buf, timingMarker);
+    //return isDataPayloadCrcValid(spi_master_rx_buf) && isMarkerValid(spi_master_rx_buf, timingMarker);
+    return isDataPayloadCrcValid(spi_master_rx_buf);
 }
 
 bool spiMasterProcess() {
-    delayMicroseconds(100);
+    //delayMicroseconds(100);
 
-    sendSpiTimingCommand();
+    //sendSpiTimingCommand();
+    gpio_set_level((gpio_num_t) SPI_CS, LOW);
 
     delayMicroseconds(100);
 

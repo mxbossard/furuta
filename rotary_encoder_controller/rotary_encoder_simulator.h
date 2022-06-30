@@ -57,7 +57,7 @@ void loop() {
     // printSimulators();
     // printSensors();
 
-    uint32_t periodInUs = 10;
+    uint32_t periodInUs = 50;
     uint32_t failedTestPause = 0;
 
     rss1.index(periodInUs);
@@ -119,6 +119,8 @@ void loop() {
 
     if (! testFailed) {
         successCount ++;
+    } else {
+        libutils::blinkLed();
     }
 
     simulationCount ++;
