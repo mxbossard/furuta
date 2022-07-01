@@ -72,7 +72,7 @@ void IRAM_ATTR sensor2EventIndex() {
 }
 
 void setup() {
-    Serial.begin(115200);
+    //Serial.begin(115200);
 
     rs1.begin();
     rs2.begin();
@@ -89,7 +89,7 @@ void setup() {
 
     pinMode(LED_PIN, OUTPUT);
 
-    delay(2000);
+    //delay(2000);
 }
 
 void loop() {

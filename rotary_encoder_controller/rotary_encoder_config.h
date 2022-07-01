@@ -16,14 +16,4 @@
 #define SPI_CLK (gpio_num_t) 18
 #define SPI_CS   (gpio_num_t) 5
 
-#define SENSOR_1_PIN_A (gpio_num_t) 36
-#define SENSOR_1_PIN_B (gpio_num_t) 39
-#define SENSOR_1_PIN_INDEX (gpio_num_t) 34
-
-#define SENSOR_2_PIN_A (gpio_num_t) 25
-#define SENSOR_2_PIN_B (gpio_num_t) 26
-#define SENSOR_2_PIN_INDEX (gpio_num_t) 27
-
-#define LED_PIN (gpio_num_t) 22
-
 #endif
