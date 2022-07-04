@@ -2,15 +2,6 @@
 
 #include "lib_crc.h"
 
-void setUp(void) {
-  // set stuff up here
-}
-
-void tearDown(void) {
-  // clean stuff up here
-}
-
-
 void testCrc8(void) {
   uint8_t message[4] = {0x01, 0x10, 0x23, 0x42};
   uint8_t expected = 0xEC;
@@ -33,6 +24,14 @@ void testXmodemCrc16_2(void) {
   uint8_t message[4] = {0x0C, 0x05};
   uint16_t expected = 0x15C8;
   TEST_ASSERT_EQUAL(expected, libcrc::xmodemCrc16(message, 2));
+}
+
+void setUp(void) {
+  // set stuff up here
+}
+
+void tearDown(void) {
+  // clean stuff up here
 }
 
 void setup() {

@@ -53,7 +53,7 @@ bool assertPosition(const char* message, RotarySensorSimulator* rss, uint16_t go
     const AngleSensor* sensor = simulator->sensor;
     uint16_t expected = simulator->position;
     uint16_t drift = abs(expected - got);
-    drift = min(drift, (uint16_t) (sensor->maxPosition - drift));
+    drift = min(drift, (uint16_t) (sensor->points - drift));
 
     if (drift > 0) {
         Serial.printf("Bad position for [%s] (%d step drift) expected %d but got %d \"%s\" !\n", sensor->name, drift, expected, got, message);

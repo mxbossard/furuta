@@ -44,8 +44,8 @@
 #include "lib_rotary_encoder_controller_2.h"
 #include "lib_rotary_encoder_controller_spi_slave_2.h"
 
-RotarySensor rs1(SENSOR_1_PIN_A, SENSOR_1_PIN_B, SENSOR_1_PIN_INDEX, false, 4000, 10, (char*)"sensor1");
-RotarySensor rs2(SENSOR_2_PIN_A, SENSOR_2_PIN_B, SENSOR_2_PIN_INDEX, false, 1000, 10, (char*)"sensor2");
+RotarySensor rs1(SENSOR_1_PIN_A, SENSOR_1_PIN_B, SENSOR_1_PIN_INDEX, false, 4000, 10);
+RotarySensor rs2(SENSOR_2_PIN_A, SENSOR_2_PIN_B, SENSOR_2_PIN_INDEX, false, 1000, 10);
 
 void IRAM_ATTR sensor1EventA() {
     rs1.eventA();

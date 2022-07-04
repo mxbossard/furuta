@@ -30,9 +30,9 @@ namespace rotaryEncoderSimulator {
             }
 
             if (simulator->sensor->quadratureMode) {
-                simulator->position = libutils::absMod16(simulator->counter, simulator->sensor->maxPosition);
+                simulator->position = libutils::absMod16(simulator->counter, simulator->sensor->points);
             } else {
-                simulator->position = libutils::absMod16(simulator->counter, simulator->sensor->maxPosition * 4) / 4;
+                simulator->position = libutils::absMod16(simulator->counter, simulator->sensor->points * 4) / 4;
             }
             
             uint16_t state = libutils::absMod16(simulator->internalState, 4);

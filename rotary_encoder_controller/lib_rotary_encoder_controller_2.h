@@ -24,10 +24,10 @@ namespace rotaryEncoderController {
             B   |         |         |         |
                 |         |         |         |
             ----+         +---------+         +---------+  0
-                    +---------+         +---------+      1
-                    |         |         |         |
+                      +---------+         +---------+      1
+                      |         |         |         |
             A         |         |         |         |
-                    |         |         |         |
+                      |         |         |         |
             +---------+         +---------+         +----- 0
     */
 
@@ -51,9 +51,9 @@ namespace rotaryEncoderController {
         }
         
         if (sensor->quadratureMode) {
-            sensor->position = libutils::absMod16(sensor->counter, sensor->maxPosition);
+            sensor->position = libutils::absMod16(sensor->counter, sensor->points);
         } else {
-            sensor->position = libutils::absMod16(sensor->counter, sensor->maxPosition * 4) / 4;
+            sensor->position = libutils::absMod16(sensor->counter, sensor->points * 4) / 4;
         }
         portEXIT_CRITICAL(&mux);
     }
@@ -106,37 +106,48 @@ namespace rotaryEncoderController {
         sensor->eventCount ++;
         circularBuffer::push(sensor->timings, usTiming);
         sensor->counter += increment;
-        sensor->position = libutils::absMod16(sensor->counter, sensor->maxPosition);
+        sensor->position = libutils::absMod16(sensor->counter, sensor->points);
         if (sensor->quadratureMode) {
-            sensor->position = libutils::absMod16(sensor->counter, sensor->maxPosition);
+            sensor->position = libutils::absMod16(sensor->counter, sensor->points);
         } else {
-            sensor->position = libutils::absMod16(sensor->counter, sensor->maxPosition * 4) / 4;
+            sensor->position = libutils::absMod16(sensor->counter, sensor->points * 4) / 4;
         }
         portEXIT_CRITICAL(&mux);    
     }
 
     void IRAM_ATTR indexSensor(volatile AngleSensor* sensor) {
         portENTER_CRITICAL(&mux);
-        sensor->counter = 0;
-        sensor->position = 0;
+        sensor->indexed = true;
+        sensor->counter = sensor->offset;
+        sensor->position = sensor->offset;
         sensor->eventCount = 0;
         portEXIT_CRITICAL(&mux);
     }
 
+    uint8_t rotarySensorCounter = 0;
+    const char* nextRotarySensorName() {
+        String name = "sensor";
+        name.concat(String(rotarySensorCounter, DEC));
+        rotarySensorCounter ++;
+        char* buffer = new char[10]; // Allocate memory from the heap
+        name.toCharArray(buffer, 10);
+        return buffer;
+    }
 }
+
 
 class RotarySensor {
 
 private:
     volatile CircularBuffer timings;
-    uint8_t speedsCount;
+    //uint8_t speedsCount;
     volatile AngleSensor sensor;
 
     int64_t* timingsBuffer;
     int64_t* speedsBuffer;
 
     void calculateSpeeds(int64_t now) {
-        for (size_t k = speedsCount - 1 ; k > 0 ; k --) {
+        for (size_t k = timings.size - 1 ; k > 0 ; k --) {
             // Calculate instantaneous speed between timings
             if (timingsBuffer[k] > 0) {
                 speedsBuffer[k] = abs(timingsBuffer[k - 1]) - timingsBuffer[k];
@@ -154,20 +165,37 @@ private:
     }
 
 public:
-    // Constructor
-    RotarySensor(uint8_t pinA, uint8_t pinB, uint8_t pinIndex, bool quadratureMode, uint16_t points, uint8_t speedsCount, char* name) :
-        timings({}), speedsCount(speedsCount), sensor({name, pinA, pinB, pinIndex, quadratureMode, points, (CircularBuffer*) &timings, 0, 0, 0, -1}) {
+    // Constructor 1
+    RotarySensor(uint8_t pinA, uint8_t pinB, uint8_t pinIndex, bool quadratureMode, uint16_t points, size_t speedsCount) :
+        timings({speedsCount}), sensor({rotaryEncoderController::nextRotarySensorName(), pinA, pinB, pinIndex, 
+            quadratureMode, points, 0, (int16_t) (points - 1), (CircularBuffer*) &timings, 0, 0, 0, -1, false, 0, 0}) {
+            begin();
+        }
+
+    // Constructor 2
+    RotarySensor(uint8_t pinA, uint8_t pinB, uint8_t pinIndex, bool quadratureMode, uint16_t points, size_t speedsCount, int16_t minValue, uint8_t rounds) :
+        timings({speedsCount}), sensor({rotaryEncoderController::nextRotarySensorName(), pinA, pinB, pinIndex, 
+            quadratureMode, points, minValue, (int16_t) (minValue + ((int16_t) points) * ((int16_t)rounds) - 1), (CircularBuffer*) &timings, 0, 0, 0, -1, false, 0, 0}) {
             begin();
         }
 
     void begin() {
-        circularBuffer::init((CircularBuffer*) &timings, speedsCount);
-        timingsBuffer = (int64_t*) malloc(sizeof(int64_t) * speedsCount);
-        speedsBuffer = (int64_t*) malloc(sizeof(int64_t) * speedsCount);
+        portENTER_CRITICAL(&rotaryEncoderController::mux);
+        circularBuffer::init((CircularBuffer*) &timings);
+        sensor.counter = 0;
+        sensor.eventCount = 0;
+        sensor.offset = 0;
+        sensor.position = 0;
+        sensor.indexed = false;
+        sensor.previousState = -1;
+        portEXIT_CRITICAL(&rotaryEncoderController::mux);
 
         pinMode(sensor.pinA, INPUT_PULLUP);
         pinMode(sensor.pinB, INPUT_PULLUP);
         pinMode(sensor.pinIndex, INPUT_PULLUP);
+
+        timingsBuffer = (int64_t*) malloc(sizeof(int64_t) * timings.size);
+        speedsBuffer = (int64_t*) malloc(sizeof(int64_t) * timings.size);
     }
 
     void IRAM_ATTR eventA() {
@@ -196,7 +224,7 @@ public:
 
         portENTER_CRITICAL(&rotaryEncoderController::mux);
         uint16_t position = sensor.position;
-        circularBuffer::copyDataArray((CircularBuffer*) &timings, timingsBuffer, speedsCount);
+        circularBuffer::copyDataArray((CircularBuffer*) &timings, timingsBuffer, timings.size);
         portEXIT_CRITICAL(&rotaryEncoderController::mux);
 
         #ifdef LOG_DEBUG
@@ -215,7 +243,7 @@ public:
         p += 2;
         
         // Speeds
-        for (size_t k = 0; k < speedsCount; k++) {
+        for (size_t k = 0; k < timings.size; k++) {
             // Limit speed to int16_t format
             int16_t limitedSpeed = libutils::int64toInt16(speedsBuffer[k]);
             buffer[p] = limitedSpeed >> 8;

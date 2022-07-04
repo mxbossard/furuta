@@ -5,7 +5,7 @@
 #include "lib_utils.h"
 
 struct CircularBuffer {
-    size_t size;
+    const size_t size;
     int64_t* data; // circular buffer
     int8_t offset;
     int8_t lastPosition;
@@ -36,9 +36,9 @@ namespace circularBuffer {
         b->lastPosition = b->size - 1;
     }
 
-    void init(CircularBuffer *cb, size_t size) {
-        cb->size = size;
-        int64_t* data = (int64_t*) malloc(sizeof(int64_t) * size);
+    void init(CircularBuffer *cb) {
+        //cb->size = size;
+        int64_t* data = (int64_t*) malloc(sizeof(int64_t) * cb->size);
         cb->data = data;
         reset(cb);
     }

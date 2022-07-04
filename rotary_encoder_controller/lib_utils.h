@@ -68,10 +68,10 @@ namespace libutils {
     }
 
     bool blinker = false;
-    void blinkLed() {
+    void blinkLed(gpio_num_t pin ) {
         // Blink led
         blinker = !blinker;
-        digitalWrite(LED_PIN, blinker);
+        gpio_set_level(pin, blinker);
     }
 
 }
