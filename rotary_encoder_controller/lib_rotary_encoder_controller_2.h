@@ -68,6 +68,17 @@ namespace rotaryEncoderController {
         return (eventA && aLevel == bLevel) || (!eventA && aLevel != bLevel);
     }
 
+    void IRAM_ATTR boxPosition(volatile AngleSensor* sensor) {
+        //sensor->position = libutils::absMod16(sensor->counter, sensor->points);
+        if (sensor->position > sensor->maxValue) {
+            int16_t delta = sensor->position - sensor->maxValue - 1;
+            sensor->position = sensor->minValue + delta;
+        } else if (sensor->position < sensor->minValue) {
+            int16_t delta = sensor->minValue - sensor->position - 1;
+            sensor->position = sensor->maxValue - delta;
+        }
+    }
+
     void IRAM_ATTR registerSmartEvent(volatile AngleSensor* sensor, bool eventA) {
         // If controller missed events since last registered state, take into account missing steps.
         int64_t usTiming = esp_timer_get_time();
@@ -106,20 +117,41 @@ namespace rotaryEncoderController {
         sensor->eventCount ++;
         circularBuffer::push(sensor->timings, usTiming);
         sensor->counter += increment;
-        sensor->position = libutils::absMod16(sensor->counter, sensor->points);
-        if (sensor->quadratureMode) {
-            sensor->position = libutils::absMod16(sensor->counter, sensor->points);
-        } else {
-            sensor->position = libutils::absMod16(sensor->counter, sensor->points * 4) / 4;
+        sensor->position += increment;
+
+        boxPosition(sensor);
+
+        if (!sensor->quadratureMode) {
+            sensor->position = sensor->position / 4;
         }
+
         portEXIT_CRITICAL(&mux);    
     }
 
     void IRAM_ATTR indexSensor(volatile AngleSensor* sensor) {
         portENTER_CRITICAL(&mux);
-        sensor->indexed = true;
-        sensor->counter = sensor->offset;
-        sensor->position = sensor->offset;
+        if (!sensor->indexed) {
+            sensor->counter = sensor->offset;
+            sensor->position = sensor->offset;
+            sensor->indexed = true;
+        } else {
+            uint16_t modPosition = libutils::absMod16(sensor->position, sensor->points);
+            int16_t delta = ((int16_t) modPosition - sensor->offset) % sensor->points;
+            if (delta != 0) {
+                // Take min range from borders and multiply it by delta sign
+                if (abs(0 - delta) < abs(sensor->points - delta)) {
+                    delta = 0 - delta;
+                } else {
+                    delta = sensor->points - delta;
+                }
+                // Position misaligned with index signal.
+                sensor->counter += delta;
+                sensor->position += delta;
+            }
+
+            boxPosition(sensor);
+        }
+        
         sensor->eventCount = 0;
         portEXIT_CRITICAL(&mux);
     }

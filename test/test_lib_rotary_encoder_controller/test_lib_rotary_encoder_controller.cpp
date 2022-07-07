@@ -72,37 +72,37 @@ void checkSomeMoves(RotarySensor* rs, uint16_t points, int16_t offset, int16_t m
   rs->getSensor()->offset = offset;
 
   rs->eventIndex();
-  TEST_ASSERT_EQUAL(offset, rs->getSensor()->position);
-  TEST_ASSERT_EQUAL(points, rs->getSensor()->points);
-  TEST_ASSERT_EQUAL(minValue, rs->getSensor()->minValue);
-  TEST_ASSERT_EQUAL(maxValue, rs->getSensor()->maxValue);
+  TEST_ASSERT_EQUAL_MESSAGE(offset, rs->getSensor()->position, "Bad position after index 1 !");
+  TEST_ASSERT_EQUAL_MESSAGE(points, rs->getSensor()->points, "Bad points configured !");
+  TEST_ASSERT_EQUAL_MESSAGE(minValue, rs->getSensor()->minValue, "Bad minValue configured !");
+  TEST_ASSERT_EQUAL_MESSAGE(maxValue, rs->getSensor()->maxValue, "Bad maxValue configured !");
 
   // Inputs A and B stay at logical level 0.
   rs->eventA();
-  TEST_ASSERT_EQUAL(expectedPosition(quadratureMode, 0, offset, minValue, maxValue), rs->getSensor()->position);
+  TEST_ASSERT_EQUAL_MESSAGE(expectedPosition(quadratureMode, 0, offset, minValue, maxValue), rs->getSensor()->position, "Bad position after eventA 1 !");
   rs->eventA();
-  TEST_ASSERT_EQUAL(expectedPosition(quadratureMode, 1, offset, minValue, maxValue), rs->getSensor()->position);
+  TEST_ASSERT_EQUAL_MESSAGE(expectedPosition(quadratureMode, 1, offset, minValue, maxValue), rs->getSensor()->position, "Bad position after eventA 2 !");
   rs->eventB();
-  TEST_ASSERT_EQUAL(expectedPosition(quadratureMode, 0, offset, minValue, maxValue), rs->getSensor()->position);
+  TEST_ASSERT_EQUAL_MESSAGE(expectedPosition(quadratureMode, 0, offset, minValue, maxValue), rs->getSensor()->position, "Bad position after eventB 1 !");
   rs->eventA();
-  TEST_ASSERT_EQUAL(expectedPosition(quadratureMode, 1, offset, minValue, maxValue), rs->getSensor()->position);
+  TEST_ASSERT_EQUAL_MESSAGE(expectedPosition(quadratureMode, 1, offset, minValue, maxValue), rs->getSensor()->position, "Bad position after eventA 3 !");
   rs->eventA();
-  TEST_ASSERT_EQUAL(expectedPosition(quadratureMode, 2, offset, minValue, maxValue), rs->getSensor()->position);
+  TEST_ASSERT_EQUAL_MESSAGE(expectedPosition(quadratureMode, 2, offset, minValue, maxValue), rs->getSensor()->position, "Bad position after eventA 4 !");
   rs->eventA();
-  TEST_ASSERT_EQUAL(expectedPosition(quadratureMode, 3, offset, minValue, maxValue), rs->getSensor()->position);
+  TEST_ASSERT_EQUAL_MESSAGE(expectedPosition(quadratureMode, 3, offset, minValue, maxValue), rs->getSensor()->position, "Bad position after eventA 5 !");
   rs->eventA();
-  TEST_ASSERT_EQUAL(expectedPosition(quadratureMode, 4, offset, minValue, maxValue), rs->getSensor()->position);
+  TEST_ASSERT_EQUAL_MESSAGE(expectedPosition(quadratureMode, 4, offset, minValue, maxValue), rs->getSensor()->position, "Bad position after eventA 6 !");
   rs->eventA();
-  TEST_ASSERT_EQUAL(expectedPosition(quadratureMode, 5, offset, minValue, maxValue), rs->getSensor()->position);
+  TEST_ASSERT_EQUAL_MESSAGE(expectedPosition(quadratureMode, 5, offset, minValue, maxValue), rs->getSensor()->position, "Bad position after eventA 7 !");
   rs->eventB();
-  TEST_ASSERT_EQUAL(expectedPosition(quadratureMode, 4, offset, minValue, maxValue), rs->getSensor()->position);
+  TEST_ASSERT_EQUAL_MESSAGE(expectedPosition(quadratureMode, 4, offset, minValue, maxValue), rs->getSensor()->position, "Bad position after eventB 2 !");
   rs->eventA();
-  TEST_ASSERT_EQUAL(expectedPosition(quadratureMode, 5, offset, minValue, maxValue), rs->getSensor()->position);
+  TEST_ASSERT_EQUAL_MESSAGE(expectedPosition(quadratureMode, 5, offset, minValue, maxValue), rs->getSensor()->position, "Bad position after eventA 8 !");
   rs->eventA();
-  TEST_ASSERT_EQUAL(expectedPosition(quadratureMode, 6, offset, minValue, maxValue), rs->getSensor()->position);
+  TEST_ASSERT_EQUAL_MESSAGE(expectedPosition(quadratureMode, 6, offset, minValue, maxValue), rs->getSensor()->position, "Bad position after eventA 9 !");
 
   rs->eventIndex();
-  TEST_ASSERT_EQUAL(offset, rs->getSensor()->position);
+  TEST_ASSERT_EQUAL_MESSAGE(offset, rs->getSensor()->position, "Bad position after index 2 !");
 }
 
 void testRotarySensorEventsInSimpleMode(void) {
@@ -133,19 +133,35 @@ void testRotarySensorEventsInSimpleModeMultipleRounds(void) {
   RotarySensor rs = {1, 2, 3, false, 5, 5, -2, 3};
   int16_t expectedOffset = 1;
 
-  checkSomeMoves(&rs, 10, expectedOffset, -2, 12);
+  checkSomeMoves(&rs, 5, expectedOffset, -2, 12);
 
   rs.begin();
+  rs.getSensor()->offset = expectedOffset;
+
   rs.eventIndex();
   TEST_ASSERT_EQUAL(expectedOffset, rs.getSensor()->position);
-  rs.eventA();
-  rs.eventA();
-  rs.eventA();
-  rs.eventA();
-  rs.eventA();
-  TEST_ASSERT_EQUAL(expectedOffset + 5, rs.getSensor()->position);
-  rs.eventIndex();
-  TEST_ASSERT_EQUAL(expectedOffset + 5, rs.getSensor()->position);
+  rs.eventA(); // +0
+  rs.eventA(); // +1
+  rs.eventA(); // +1
+  TEST_ASSERT_EQUAL(expectedOffset + 2, rs.getSensor()->position);
+  rs.eventIndex(); // Index must align to offset + N x points
+  TEST_ASSERT_EQUAL(expectedOffset, rs.getSensor()->position);
+  rs.eventB(); // -1
+  rs.eventB(); // -1
+  TEST_ASSERT_EQUAL(expectedOffset - 2, rs.getSensor()->position);
+  rs.eventIndex(); // Index must align to offset + N x points
+  TEST_ASSERT_EQUAL(expectedOffset, rs.getSensor()->position);
+  rs.eventB(); // -1
+  rs.eventB(); // -1
+  rs.eventB(); // -1
+  TEST_ASSERT_EQUAL(expectedOffset - 3, rs.getSensor()->position);
+  rs.eventIndex(); // Index must align to offset + N x points
+  TEST_ASSERT_EQUAL(expectedOffset + 10, rs.getSensor()->position);
+  rs.eventB(); // -4
+  rs.eventB(); // -4
+  TEST_ASSERT_EQUAL(expectedOffset + 8, rs.getSensor()->position);
+  rs.eventIndex(); // Index must align to offset + N x points
+  TEST_ASSERT_EQUAL(expectedOffset + 10, rs.getSensor()->position);
   
 }
 
@@ -180,14 +196,30 @@ void testRotarySensorEventsInQuadratureModeMultipleRounds(void) {
   checkSomeMoves(&rs, 10, expectedOffset, -4, 25);
 
   rs.begin();
+  rs.getSensor()->offset = expectedOffset;
+
   rs.eventIndex();
   TEST_ASSERT_EQUAL(expectedOffset, rs.getSensor()->position);
-  rs.eventA();
-  rs.eventA();
-  rs.eventA();
+  rs.eventA(); // +1
+  rs.eventA(); // +4
+  rs.eventA(); // +4
+  TEST_ASSERT_EQUAL(expectedOffset + 9, rs.getSensor()->position);
+  rs.eventIndex(); // Index must align to offset + N x points
   TEST_ASSERT_EQUAL(expectedOffset + 10, rs.getSensor()->position);
-  rs.eventIndex();
-  TEST_ASSERT_EQUAL(expectedOffset + 10, rs.getSensor()->position);
+  rs.eventB(); // -4
+  rs.eventB(); // -4
+  TEST_ASSERT_EQUAL(expectedOffset + 2, rs.getSensor()->position);
+  rs.eventIndex(); // Index must align to offset + N x points
+  TEST_ASSERT_EQUAL(expectedOffset, rs.getSensor()->position);
+  rs.eventB(); // -4
+  TEST_ASSERT_EQUAL(expectedOffset - 4, rs.getSensor()->position);
+  rs.eventIndex(); // Index must align to offset + N x points
+  TEST_ASSERT_EQUAL(expectedOffset, rs.getSensor()->position);
+  rs.eventB(); // -4
+  rs.eventB(); // -4
+  TEST_ASSERT_EQUAL(expectedOffset + 22, rs.getSensor()->position);
+  rs.eventIndex(); // Index must align to offset + N x points
+  TEST_ASSERT_EQUAL(expectedOffset + 20, rs.getSensor()->position);
 }
 
 void setUp(void) {

@@ -18,11 +18,11 @@ struct AngleSensor {
     CircularBuffer* timings;
     // FIXME: actual counter may overflow if always rotating in same direction without reset.
     int32_t counter; // Position not boxed by min and max values 
-    uint16_t position; // Position boxed by min and max values
+    int16_t position; // Position boxed by min and max values
     uint32_t eventCount; // Event count received
     int8_t previousState; // Last quadrature state received (4 states possible)
     bool indexed; // True if sensor was indexed at least once
-    int16_t offset; // Programmable counter offset: index set counter to offset value
+    int16_t offset; // Programmable counter offset: index set counter to offset
     int8_t roundCount; // Number of overflow in positive or negative direction
 };
 
